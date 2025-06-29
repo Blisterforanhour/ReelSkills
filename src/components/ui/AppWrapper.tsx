@@ -34,7 +34,10 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
 
   if (isInitializing) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
+      <div className="min-h-screen flex items-center justify-center" style={{ 
+        background: 'radial-gradient(ellipse at center, #1E293B 0%, #0F172A 100%)',
+        backgroundAttachment: 'fixed'
+      }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-white text-lg">Initializing...</p>
@@ -57,12 +60,17 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
     };
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ 
+        background: 'radial-gradient(ellipse at center, #1E293B 0%, #0F172A 100%)',
+        backgroundAttachment: 'fixed'
+      }}>
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-xl shadow-2xl p-8">
+          <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-2xl p-8">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">ReelSkills</h1>
-              <p className="text-gray-600">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-cyan-400 bg-clip-text text-transparent mb-2">
+                ReelSkills
+              </h1>
+              <p className="text-slate-400">
                 {authMode === 'login' && 'Welcome back! Sign in to continue.'}
                 {authMode === 'signup' && 'Create your account to get started.'}
                 {authMode === 'reset' && 'Reset your password.'}
@@ -70,8 +78,8 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                <p className="text-red-800 text-sm">{error}</p>
+              <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-6">
+                <p className="text-red-300 text-sm">{error}</p>
               </div>
             )}
 
@@ -79,26 +87,26 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
               {authMode === 'signup' && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
                       First Name
                     </label>
                     <input
                       type="text"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
                       placeholder="John"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-slate-300 mb-1">
                       Last Name
                     </label>
                     <input
                       type="text"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
                       placeholder="Doe"
                     />
                   </div>
@@ -106,14 +114,14 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-slate-300 mb-1">
                   Email
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
                   placeholder="john@example.com"
                   required
                 />
@@ -121,14 +129,14 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
 
               {authMode !== 'reset' && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-slate-300 mb-1">
                     Password
                   </label>
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
                     placeholder="••••••••"
                     required
                   />
@@ -137,7 +145,7 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white border-0"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -161,7 +169,7 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
                   <button
                     type="button"
                     onClick={() => setAuthMode('signup')}
-                    className="text-blue-600 hover:text-blue-700 text-sm"
+                    className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
                   >
                     Don't have an account? Sign up
                   </button>
@@ -169,7 +177,7 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
                   <button
                     type="button"
                     onClick={() => setAuthMode('reset')}
-                    className="text-gray-600 hover:text-gray-700 text-sm"
+                    className="text-slate-400 hover:text-slate-300 text-sm transition-colors"
                   >
                     Forgot your password?
                   </button>
@@ -179,7 +187,7 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
                 <button
                   type="button"
                   onClick={() => setAuthMode('login')}
-                  className="text-blue-600 hover:text-blue-700 text-sm"
+                  className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
                 >
                   Already have an account? Sign in
                 </button>
@@ -188,7 +196,7 @@ export const AppWrapper: React.FC<AppWrapperProps> = ({
                 <button
                   type="button"
                   onClick={() => setAuthMode('login')}
-                  className="text-blue-600 hover:text-blue-700 text-sm"
+                  className="text-blue-400 hover:text-blue-300 text-sm transition-colors"
                 >
                   Back to sign in
                 </button>
