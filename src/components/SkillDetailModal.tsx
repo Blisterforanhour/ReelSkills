@@ -210,7 +210,7 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                 <div className="bg-slate-700/30 rounded-xl p-4">
                   <div className="flex items-center gap-3 mb-3">
                     <TrendingUp size={20} className="text-purple-400" />
-                    <h3 className="text-lg font-semibold text-white">AI Assessment</h3>
+                    <h3 className="text-lg font-semibold text-white">AI ReelSkill Assessment</h3>
                     <div className="flex items-center gap-1">
                       {[...Array(5)].map((_, i) => (
                         <Star
@@ -252,12 +252,12 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                 )}
               </div>
 
-              {/* Video Demo */}
+              {/* ReelSkill Video Demo */}
               <div className="bg-slate-700/30 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <Video size={20} className="text-red-400" />
-                    <h3 className="text-lg font-semibold text-white">Video Demonstration</h3>
+                    <h3 className="text-lg font-semibold text-white">ReelSkill Demonstration</h3>
                     {skill.video_verified && (
                       <div className="flex items-center gap-1 text-emerald-400">
                         <Award size={16} />
@@ -272,7 +272,7 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                       className="bg-purple-600/80 hover:bg-purple-700/80"
                     >
                       <Upload size={14} className="mr-1" />
-                      {skill.video_demo_url ? 'Update' : 'Add'} Video
+                      {skill.video_demo_url ? 'Update' : 'Add'} ReelSkill
                     </Button>
                   )}
                 </div>
@@ -296,7 +296,7 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                         className="flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm"
                       >
                         <Play size={16} />
-                        Watch Video Demo
+                        Watch ReelSkill Demo
                       </a>
                     </div>
                     {skill.video_uploaded_at && (
@@ -307,7 +307,7 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                   </div>
                 ) : (
                   <p className="text-slate-400 text-sm">
-                    No video demonstration yet. Add one to get AI verification and boost your profile!
+                    No ReelSkill demonstration yet. Add one to get AI verification and boost your profile!
                   </p>
                 )}
               </div>
@@ -320,7 +320,7 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                     <>
                       <p>• Complete foundational courses and tutorials</p>
                       <p>• Practice with small projects</p>
-                      <p>• Add a video demonstration</p>
+                      <p>• Create your first ReelSkill demonstration</p>
                     </>
                   )}
                   {skill.proficiency === 'intermediate' && (
@@ -328,6 +328,7 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                       <p>• Work on more complex projects</p>
                       <p>• Seek peer endorsements</p>
                       <p>• Consider certification</p>
+                      <p>• Upload advanced ReelSkill videos</p>
                     </>
                   )}
                   {skill.proficiency === 'advanced' && (
@@ -335,6 +336,7 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                       <p>• Lead projects using this skill</p>
                       <p>• Mentor others</p>
                       <p>• Contribute to open source</p>
+                      <p>• Create expert-level ReelSkills</p>
                     </>
                   )}
                   {(skill.proficiency === 'expert' || skill.proficiency === 'master') && (
@@ -342,6 +344,7 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                       <p>• Share knowledge through content creation</p>
                       <p>• Speak at conferences</p>
                       <p>• Develop new methodologies</p>
+                      <p>• Create master-class ReelSkills</p>
                     </>
                   )}
                 </div>

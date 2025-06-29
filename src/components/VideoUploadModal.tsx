@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Dialog } from '@headlessui/react';
 import { Button } from './ui/Button';
-import { X, Upload, Video, AlertCircle, CheckCircle, FileVideo, Cloud } from 'lucide-react';
+import { X, Upload, Video, AlertCircle, CheckCircle, FileVideo, Cloud, Play } from 'lucide-react';
 
 interface VideoUploadModalProps {
   isOpen: boolean;
@@ -32,13 +32,13 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
     if (file) {
       // Validate file type
       if (!file.type.startsWith('video/')) {
-        setError('Please select a valid video file');
+        setError('Please select a valid video file for your ReelSkill');
         return;
       }
       
       // Validate file size (max 100MB)
       if (file.size > 100 * 1024 * 1024) {
-        setError('Video file must be less than 100MB');
+        setError('ReelSkill video must be less than 100MB');
         return;
       }
       
@@ -68,12 +68,12 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
           const response = JSON.parse(xhr.responseText);
           resolve(response.videoUrl);
         } else {
-          reject(new Error('Upload failed'));
+          reject(new Error('ReelSkill upload failed'));
         }
       });
 
       xhr.addEventListener('error', () => {
-        reject(new Error('Upload failed'));
+        reject(new Error('ReelSkill upload failed'));
       });
 
       // Use your S3 upload endpoint
@@ -88,7 +88,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
 
     if (uploadMethod === 'file') {
       if (!videoFile) {
-        setError('Please select a video file');
+        setError('Please select a ReelSkill video file');
         return;
       }
 
@@ -99,13 +99,13 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
         finalVideoUrl = await uploadToS3(videoFile);
       } catch (error) {
         console.error('Upload error:', error);
-        setError('Failed to upload video. Please try again.');
+        setError('Failed to upload ReelSkill. Please try again.');
         setIsUploading(false);
         return;
       }
     } else {
       if (!videoUrl.trim()) {
-        setError('Please enter a video URL');
+        setError('Please enter a ReelSkill video URL');
         return;
       }
       finalVideoUrl = videoUrl.trim();
@@ -132,15 +132,15 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || 'Analysis failed');
+        throw new Error(result.error || 'ReelSkill analysis failed');
       }
 
       onVideoAnalyzed(result);
       resetForm();
       onClose();
     } catch (error) {
-      console.error('Video analysis error:', error);
-      setError(error instanceof Error ? error.message : 'Analysis failed');
+      console.error('ReelSkill analysis error:', error);
+      setError(error instanceof Error ? error.message : 'ReelSkill analysis failed');
     } finally {
       setIsAnalyzing(false);
     }
@@ -175,9 +175,9 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
           <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
             <div>
               <Dialog.Title className="text-xl font-bold text-white">
-                Upload Video Demo
+                Upload Your ReelSkill
               </Dialog.Title>
-              <p className="text-slate-400">Demonstrate your {skillName} skills</p>
+              <p className="text-slate-400">Showcase your {skillName} expertise</p>
             </div>
             <button
               onClick={handleClose}
@@ -201,7 +201,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
             {/* Upload Method Selection */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-3">
-                Upload Method
+                How would you like to share your ReelSkill?
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <button
@@ -216,9 +216,9 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                 >
                   <div className="flex items-center gap-3 mb-2">
                     <Cloud size={20} />
-                    <span className="font-medium">Upload File</span>
+                    <span className="font-medium">Upload ReelSkill</span>
                   </div>
-                  <p className="text-xs opacity-75">Upload directly to our secure cloud storage</p>
+                  <p className="text-xs opacity-75">Upload your video directly to secure storage</p>
                 </button>
 
                 <button
@@ -233,9 +233,9 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                 >
                   <div className="flex items-center gap-3 mb-2">
                     <Video size={20} />
-                    <span className="font-medium">Video URL</span>
+                    <span className="font-medium">Link ReelSkill</span>
                   </div>
-                  <p className="text-xs opacity-75">Link to YouTube, Vimeo, or other platforms</p>
+                  <p className="text-xs opacity-75">Share from YouTube, Vimeo, or other platforms</p>
                 </button>
               </div>
             </div>
@@ -244,7 +244,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
             {uploadMethod === 'file' && (
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Select Video File
+                  Select Your ReelSkill Video
                 </label>
                 <div
                   className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
@@ -267,7 +267,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                       <CheckCircle size={32} className="text-green-400 mx-auto" />
                       <p className="text-green-300 font-medium">{videoFile.name}</p>
                       <p className="text-slate-400 text-sm">
-                        {(videoFile.size / (1024 * 1024)).toFixed(1)} MB
+                        {(videoFile.size / (1024 * 1024)).toFixed(1)} MB ReelSkill ready!
                       </p>
                       <Button
                         size="small"
@@ -276,14 +276,14 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                         disabled={isProcessing}
                         className="border-slate-600/50 text-slate-300"
                       >
-                        Change File
+                        Change ReelSkill
                       </Button>
                     </div>
                   ) : (
                     <div className="space-y-3">
                       <FileVideo size={32} className="text-slate-400 mx-auto" />
                       <div>
-                        <p className="text-white font-medium">Choose a video file</p>
+                        <p className="text-white font-medium">Choose your ReelSkill video</p>
                         <p className="text-slate-400 text-sm">MP4, MOV, AVI up to 100MB</p>
                       </div>
                       <Button
@@ -293,7 +293,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                         className="bg-blue-600/80 hover:bg-blue-700/80"
                       >
                         <Upload size={14} className="mr-1" />
-                        Select File
+                        Select ReelSkill
                       </Button>
                     </div>
                   )}
@@ -305,7 +305,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
             {uploadMethod === 'url' && (
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Video URL
+                  ReelSkill Video URL
                 </label>
                 <input
                   type="url"
@@ -316,7 +316,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                   disabled={isProcessing}
                 />
                 <p className="text-slate-400 text-xs mt-2">
-                  Supported platforms: YouTube, Vimeo, or direct video links
+                  Link to your ReelSkill on YouTube, Vimeo, or direct video links
                 </p>
               </div>
             )}
@@ -326,7 +326,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
                 <div className="flex items-center gap-3 mb-3">
                   <Cloud size={20} className="text-blue-400" />
-                  <h4 className="font-semibold text-white">Uploading to Cloud Storage...</h4>
+                  <h4 className="font-semibold text-white">Uploading Your ReelSkill...</h4>
                 </div>
                 <div className="w-full bg-slate-700/30 rounded-full h-3 mb-2">
                   <div 
@@ -344,9 +344,9 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                 <div className="flex items-center gap-3">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-400"></div>
                   <div>
-                    <h4 className="font-semibold text-white">Analyzing Video...</h4>
+                    <h4 className="font-semibold text-white">Analyzing Your ReelSkill...</h4>
                     <p className="text-slate-300 text-sm">
-                      Our AI is reviewing your {skillName} demonstration. This may take a few moments.
+                      Our AI is reviewing your {skillName} ReelSkill demonstration. This may take a few moments.
                     </p>
                   </div>
                 </div>
@@ -357,20 +357,32 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
             {!isProcessing && (
               <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
                 <div className="flex items-center gap-3 mb-2">
-                  <Video size={20} className="text-purple-400" />
-                  <h4 className="font-semibold text-white">AI-Powered Analysis</h4>
+                  <Play size={20} className="text-purple-400" />
+                  <h4 className="font-semibold text-white">AI-Powered ReelSkill Analysis</h4>
                 </div>
                 <p className="text-slate-300 text-sm">
-                  Our AI will analyze your video demonstration and provide:
+                  Our AI will analyze your ReelSkill demonstration and provide:
                 </p>
                 <ul className="text-slate-300 text-sm mt-2 space-y-1">
                   <li>• Skill proficiency assessment (1-5 stars)</li>
-                  <li>• Detailed feedback and suggestions</li>
-                  <li>• Verification status for your portfolio</li>
-                  <li>• Recommendations for improvement</li>
+                  <li>• Detailed feedback and improvement suggestions</li>
+                  <li>• ReelSkill verification status for your portfolio</li>
+                  <li>• Personalized learning recommendations</li>
                 </ul>
               </div>
             )}
+
+            {/* ReelSkill Tips */}
+            <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
+              <h4 className="font-semibold text-white mb-3">💡 ReelSkill Tips</h4>
+              <ul className="space-y-1 text-sm text-slate-300">
+                <li>• Keep your ReelSkill under 3 minutes for best engagement</li>
+                <li>• Show real problem-solving, not just theory</li>
+                <li>• Explain your thought process as you work</li>
+                <li>• Include before/after results when possible</li>
+                <li>• Ensure good audio and video quality</li>
+              </ul>
+            </div>
           </div>
 
           {/* Footer */}
@@ -395,17 +407,17 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
               {isUploading ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Uploading... {uploadProgress}%
+                  Uploading ReelSkill... {uploadProgress}%
                 </>
               ) : isAnalyzing ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Analyzing...
+                  Analyzing ReelSkill...
                 </>
               ) : (
                 <>
                   <Upload size={16} className="mr-2" />
-                  {uploadMethod === 'file' ? 'Upload & Analyze' : 'Analyze Video'}
+                  {uploadMethod === 'file' ? 'Upload ReelSkill' : 'Analyze ReelSkill'}
                 </>
               )}
             </Button>

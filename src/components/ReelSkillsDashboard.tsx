@@ -134,12 +134,12 @@ const ReelSkillsDashboard: React.FC = () => {
   const generateImprovements = (skill: Skill): AIImprovement[] => {
     const improvements: AIImprovement[] = [];
 
-    // Video demonstration
+    // ReelSkill video demonstration
     if (!skill.video_demo_url) {
       improvements.push({
         type: 'video',
-        title: 'Add Video Demonstration',
-        description: 'Upload a video showing your skills in action. This increases profile credibility by 300%.',
+        title: 'Create Your First ReelSkill',
+        description: 'Upload a ReelSkill video showing your skills in action. This increases profile credibility by 300%.',
         priority: 'critical',
         actionable: true,
         estimatedTime: '30 minutes',
@@ -148,8 +148,8 @@ const ReelSkillsDashboard: React.FC = () => {
     } else if (!skill.video_verified) {
       improvements.push({
         type: 'video',
-        title: 'Get AI Verification',
-        description: 'Your video needs AI analysis for verification. This will provide detailed feedback.',
+        title: 'Get AI ReelSkill Verification',
+        description: 'Your ReelSkill needs AI analysis for verification. This will provide detailed feedback.',
         priority: 'high',
         actionable: true,
         estimatedTime: '5 minutes',
@@ -645,7 +645,7 @@ const ReelSkillsDashboard: React.FC = () => {
                     {skill.video_verified && (
                       <div className="flex items-center gap-1 mt-2">
                         <CheckCircle size={12} className="text-green-400" />
-                        <span className="text-xs text-green-400">Verified</span>
+                        <span className="text-xs text-green-400">ReelSkill Verified</span>
                       </div>
                     )}
                   </button>
@@ -693,7 +693,7 @@ const ReelSkillsDashboard: React.FC = () => {
                       className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-xl px-12 py-6 rounded-2xl"
                     >
                       <Upload size={24} className="mr-3" />
-                      Upload Video Demo
+                      Upload Your ReelSkill
                     </Button>
                   ) : !currentSkill.video_verified ? (
                     <Button
@@ -701,16 +701,16 @@ const ReelSkillsDashboard: React.FC = () => {
                       className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-xl px-12 py-6 rounded-2xl"
                     >
                       <Brain size={24} className="mr-3" />
-                      Get AI Analysis
+                      Get AI ReelSkill Analysis
                     </Button>
                   ) : (
                     <div className="bg-green-500/20 border border-green-500/30 rounded-2xl p-6">
                       <div className="flex items-center justify-center gap-3 mb-3">
                         <CheckCircle size={24} className="text-green-400" />
-                        <span className="text-xl font-bold text-green-300">Skill Verified!</span>
+                        <span className="text-xl font-bold text-green-300">ReelSkill Verified!</span>
                       </div>
                       <p className="text-slate-300">
-                        Your {currentSkill.name} skills have been AI-verified. Great work!
+                        Your {currentSkill.name} ReelSkill has been AI-verified. Great work!
                       </p>
                       {currentSkill.video_demo_url && (
                         <Button
@@ -719,7 +719,7 @@ const ReelSkillsDashboard: React.FC = () => {
                           className="mt-4 border-green-500/30 text-green-300"
                         >
                           <Play size={16} className="mr-2" />
-                          View Demo
+                          View ReelSkill
                         </Button>
                       )}
                     </div>
@@ -731,7 +731,7 @@ const ReelSkillsDashboard: React.FC = () => {
                   <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-6 mb-8">
                     <div className="flex items-center gap-3 mb-3">
                       <Brain size={20} className="text-purple-400" />
-                      <h3 className="font-semibold text-white">AI Feedback</h3>
+                      <h3 className="font-semibold text-white">AI ReelSkill Feedback</h3>
                     </div>
                     <p className="text-slate-300">{currentSkill.ai_feedback}</p>
                   </div>
