@@ -5,7 +5,7 @@ import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
 import { VideoUploadModal } from './VideoUploadModal';
 import { SkillDetailModal } from './SkillDetailModal';
-import { Target, Plus, Brain, Star, Award, Video, CheckCircle, Upload, Play, Edit } from 'lucide-react';
+import { Target, Plus, Brain, Star, Award, Video, CheckCircle, Upload, Play, Edit, AlertCircle } from 'lucide-react';
 
 interface Skill {
   id: string;
@@ -208,18 +208,28 @@ const ReelSkillsDashboard: React.FC = () => {
     }
   };
 
-  const handleVideoAnalyzed = async (result: { rating: number; feedback: string; verified: boolean }) => {
+  const handleVideoAnalyzed = async (result: { rating: number | null; feedback: string | null; verified: boolean; message?: string }) => {
     if (!currentSkill) return;
     
     try {
+      const updateData: any = {
+        video_uploaded_at: new Date().toISOString(),
+      };
+
+      // Only update AI fields if they have actual values (not null)
+      if (result.rating !== null) {
+        updateData.ai_rating = result.rating;
+      }
+      if (result.feedback !== null) {
+        updateData.ai_feedback = result.feedback;
+      }
+      if (result.verified !== null) {
+        updateData.video_verified = result.verified;
+      }
+
       const { data, error } = await supabase
         .from('skills')
-        .update({
-          ai_rating: result.rating,
-          ai_feedback: result.feedback,
-          video_verified: result.verified,
-          video_uploaded_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', currentSkill.id)
         .select()
         .single();
@@ -232,6 +242,11 @@ const ReelSkillsDashboard: React.FC = () => {
         setSkills(prev => prev.map(skill => 
           skill.id === currentSkill.id ? updatedSkill : skill
         ));
+      }
+
+      // Show message if AI analysis is not yet available
+      if (result.message) {
+        alert(result.message);
       }
     } catch (error) {
       console.error('Error updating skill:', error);
@@ -247,7 +262,7 @@ const ReelSkillsDashboard: React.FC = () => {
       }}>
         <div className="text-center max-w-md mx-auto p-6">
           <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-8">
-            <Target size={48} className="text-yellow-400 mx-auto mb-4" />
+            <AlertCircle size={48} className="text-yellow-400 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-white mb-2">Profile Setup Required</h2>
             <p className="text-slate-400 mb-6">
               We need to set up your profile to get started with ReelSkills.
@@ -304,7 +319,7 @@ const ReelSkillsDashboard: React.FC = () => {
             ReelSkills
           </h1>
           <p className="text-slate-400 text-lg">
-            Master one skill at a time with AI-powered guidance
+            Showcase your expertise with video demonstrations
           </p>
         </div>
 
@@ -373,6 +388,12 @@ const ReelSkillsDashboard: React.FC = () => {
                         <span className="text-xs text-green-400">ReelSkill Verified</span>
                       </div>
                     )}
+                    {skill.video_demo_url && !skill.video_verified && (
+                      <div className="flex items-center gap-1 mt-2">
+                        <Video size={12} className="text-blue-400" />
+                        <span className="text-xs text-blue-400">ReelSkill Uploaded</span>
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
@@ -391,7 +412,7 @@ const ReelSkillsDashboard: React.FC = () => {
                     <span>{currentSkill.years_experience} years</span>
                   </div>
                   
-                  {/* AI Rating */}
+                  {/* AI Rating - only show if exists */}
                   {currentSkill.ai_rating && (
                     <div className="flex items-center justify-center gap-2 mt-4">
                       <span className="text-slate-400">AI Rating:</span>
@@ -420,15 +441,7 @@ const ReelSkillsDashboard: React.FC = () => {
                       <Upload size={24} className="mr-3" />
                       Upload Your ReelSkill
                     </Button>
-                  ) : !currentSkill.video_verified ? (
-                    <Button
-                      onClick={() => setShowVideoUpload(true)}
-                      className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-xl px-12 py-6 rounded-2xl"
-                    >
-                      <Brain size={24} className="mr-3" />
-                      Get AI ReelSkill Analysis
-                    </Button>
-                  ) : (
+                  ) : currentSkill.video_verified ? (
                     <div className="bg-green-500/20 border border-green-500/30 rounded-2xl p-6">
                       <div className="flex items-center justify-center gap-3 mb-3">
                         <CheckCircle size={24} className="text-green-400" />
@@ -437,21 +450,46 @@ const ReelSkillsDashboard: React.FC = () => {
                       <p className="text-slate-300">
                         Your {currentSkill.name} ReelSkill has been AI-verified. Great work!
                       </p>
-                      {currentSkill.video_demo_url && (
+                      <Button
+                        onClick={() => window.open(currentSkill.video_demo_url, '_blank')}
+                        variant="outline"
+                        className="mt-4 border-green-500/30 text-green-300"
+                      >
+                        <Play size={16} className="mr-2" />
+                        View ReelSkill
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="bg-blue-500/20 border border-blue-500/30 rounded-2xl p-6">
+                      <div className="flex items-center justify-center gap-3 mb-3">
+                        <Video size={24} className="text-blue-400" />
+                        <span className="text-xl font-bold text-blue-300">ReelSkill Uploaded</span>
+                      </div>
+                      <p className="text-slate-300 mb-4">
+                        Your {currentSkill.name} ReelSkill is ready for viewing. AI analysis will be available when integrated.
+                      </p>
+                      <div className="flex justify-center gap-3">
                         <Button
                           onClick={() => window.open(currentSkill.video_demo_url, '_blank')}
                           variant="outline"
-                          className="mt-4 border-green-500/30 text-green-300"
+                          className="border-blue-500/30 text-blue-300"
                         >
                           <Play size={16} className="mr-2" />
                           View ReelSkill
                         </Button>
-                      )}
+                        <Button
+                          onClick={() => setShowVideoUpload(true)}
+                          className="bg-blue-600/80 hover:bg-blue-700/80"
+                        >
+                          <Upload size={16} className="mr-2" />
+                          Update ReelSkill
+                        </Button>
+                      </div>
                     </div>
                   )}
                 </div>
 
-                {/* AI Feedback */}
+                {/* AI Feedback - only show if exists */}
                 {currentSkill.ai_feedback && (
                   <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-6 mb-8">
                     <div className="flex items-center gap-3 mb-3">

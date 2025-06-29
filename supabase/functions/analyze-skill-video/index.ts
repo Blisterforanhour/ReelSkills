@@ -26,32 +26,33 @@ serve(async (req) => {
 
     const { skillId, videoUrl, skillName, proficiencyLevel }: AnalyzeVideoRequest = await req.json()
 
-    // Simulate AI video analysis (replace with actual AI service)
-    const analysisResult = await analyzeVideoWithAI(videoUrl, skillName, proficiencyLevel)
+    // TODO: Replace with actual AI service integration
+    // For now, return a basic response indicating the video was received
+    const analysisResult = {
+      rating: null, // No mock rating
+      feedback: null, // No mock feedback
+      verified: false // Not verified until real AI analysis
+    }
 
-    // Update skill with AI feedback
+    // Update skill with video URL only (no fake AI data)
     const { error: updateError } = await supabaseClient
       .from('skills')
       .update({
-        ai_rating: analysisResult.rating,
-        ai_feedback: analysisResult.feedback,
-        video_verified: analysisResult.verified,
+        video_demo_url: videoUrl,
         video_uploaded_at: new Date().toISOString()
       })
       .eq('id', skillId)
 
     if (updateError) throw updateError
 
-    // Create video verification record
+    // Create video verification record without fake AI data
     const { error: verificationError } = await supabaseClient
       .from('skill_video_verifications')
       .insert({
         skill_id: skillId,
         video_url: videoUrl,
         ai_prompt: `Analyze ${skillName} skill demonstration at ${proficiencyLevel} level`,
-        ai_rating: analysisResult.rating,
-        ai_feedback: analysisResult.feedback,
-        verification_status: analysisResult.verified ? 'verified' : 'pending'
+        verification_status: 'pending'
       })
 
     if (verificationError) throw verificationError
@@ -59,9 +60,10 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        rating: analysisResult.rating,
-        feedback: analysisResult.feedback,
-        verified: analysisResult.verified
+        message: 'Video uploaded successfully. AI analysis will be available when integrated.',
+        rating: null,
+        feedback: null,
+        verified: false
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -78,30 +80,3 @@ serve(async (req) => {
     )
   }
 })
-
-async function analyzeVideoWithAI(videoUrl: string, skillName: string, proficiencyLevel: string) {
-  // This is a mock implementation - replace with actual AI service
-  // You could integrate with OpenAI, AWS Bedrock, or other AI services here
-  
-  const mockAnalysis = {
-    rating: Math.floor(Math.random() * 2) + 3, // 3-5 rating
-    feedback: generateMockFeedback(skillName, proficiencyLevel),
-    verified: Math.random() > 0.3 // 70% verification rate
-  }
-
-  // Simulate processing time
-  await new Promise(resolve => setTimeout(resolve, 2000))
-
-  return mockAnalysis
-}
-
-function generateMockFeedback(skillName: string, proficiencyLevel: string): string {
-  const feedbackTemplates = [
-    `Great demonstration of ${skillName} skills! Your ${proficiencyLevel} level expertise is clearly visible in the video.`,
-    `Solid ${skillName} demonstration. Consider adding more advanced techniques to showcase your ${proficiencyLevel} proficiency.`,
-    `Excellent ${skillName} showcase! Your understanding of core concepts aligns well with ${proficiencyLevel} level expectations.`,
-    `Good ${skillName} demonstration. To strengthen your profile, consider showing more complex problem-solving scenarios.`
-  ]
-  
-  return feedbackTemplates[Math.floor(Math.random() * feedbackTemplates.length)]
-}
