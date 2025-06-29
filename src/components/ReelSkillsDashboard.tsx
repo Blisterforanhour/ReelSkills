@@ -46,6 +46,7 @@ const ReelSkillsDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [creatingProfile, setCreatingProfile] = useState(false);
   const [loadingInsights, setLoadingInsights] = useState(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
   
   // New modal states
   const [learningPathModal, setLearningPathModal] = useState<{ isOpen: boolean; skill?: Skill }>({ isOpen: false });
@@ -132,12 +133,23 @@ const ReelSkillsDashboard: React.FC = () => {
     if (!profile?.id) return;
     
     setLoadingInsights(true);
+    setInsightsError(null);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-skill-insights`, {
+      // Check if environment variables are available
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseAnonKey) {
+        console.warn('Supabase environment variables not configured, using local insights');
+        generateLocalInsights();
+        return;
+      }
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/generate-skill-insights`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -147,14 +159,21 @@ const ReelSkillsDashboard: React.FC = () => {
 
       if (response.ok) {
         const result = await response.json();
-        setAiInsights(result.insights || []);
+        if (result.insights && Array.isArray(result.insights)) {
+          setAiInsights(result.insights);
+        } else {
+          console.warn('Invalid insights response, using local insights');
+          generateLocalInsights();
+        }
       } else {
-        // Fallback to local insights generation
+        const errorData = await response.json().catch(() => ({}));
+        console.warn('Edge function failed:', errorData);
+        setInsightsError('AI insights temporarily unavailable');
         generateLocalInsights();
       }
     } catch (error) {
-      console.error('Error fetching AI insights:', error);
-      // Fallback to local insights generation
+      console.warn('Error fetching AI insights:', error);
+      setInsightsError('AI insights temporarily unavailable');
       generateLocalInsights();
     } finally {
       setLoadingInsights(false);
@@ -549,6 +568,11 @@ const ReelSkillsDashboard: React.FC = () => {
               <div className="flex items-center gap-3">
                 <Brain size={24} className="text-purple-400" />
                 <h2 className="text-xl font-bold text-white">AI Career Guidance</h2>
+                {insightsError && (
+                  <span className="text-xs text-amber-400 bg-amber-500/20 px-2 py-1 rounded">
+                    {insightsError}
+                  </span>
+                )}
               </div>
               <Button
                 size="small"

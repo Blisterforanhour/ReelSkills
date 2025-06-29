@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = {
@@ -10,18 +9,31 @@ interface GenerateInsightsRequest {
   profileId: string;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    // Get environment variables with fallback error handling
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing environment variables:', {
+        hasUrl: !!supabaseUrl,
+        hasServiceKey: !!supabaseServiceKey
+      })
+      throw new Error('Missing required environment variables')
+    }
+
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey)
 
     const { profileId }: GenerateInsightsRequest = await req.json()
+
+    if (!profileId) {
+      throw new Error('Profile ID is required')
+    }
 
     // Fetch user's skills
     const { data: skills, error: skillsError } = await supabaseClient
@@ -29,7 +41,10 @@ serve(async (req) => {
       .select('*')
       .eq('profile_id', profileId)
 
-    if (skillsError) throw skillsError
+    if (skillsError) {
+      console.error('Skills fetch error:', skillsError)
+      throw new Error(`Failed to fetch skills: ${skillsError.message}`)
+    }
 
     // Fetch user's profile
     const { data: profile, error: profileError } = await supabaseClient
@@ -38,10 +53,13 @@ serve(async (req) => {
       .eq('id', profileId)
       .single()
 
-    if (profileError) throw profileError
+    if (profileError) {
+      console.error('Profile fetch error:', profileError)
+      throw new Error(`Failed to fetch profile: ${profileError.message}`)
+    }
 
     // Generate AI insights based on skills and profile
-    const insights = await generatePersonalizedInsights(skills, profile)
+    const insights = await generatePersonalizedInsights(skills || [], profile)
 
     return new Response(
       JSON.stringify({ insights }),
@@ -51,11 +69,15 @@ serve(async (req) => {
       },
     )
   } catch (error) {
+    console.error('Function error:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message || 'Internal server error',
+        details: error.toString()
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       },
     )
   }
