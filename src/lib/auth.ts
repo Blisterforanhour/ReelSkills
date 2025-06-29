@@ -145,7 +145,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: true, error: null });
       const supabase = getSupabaseClient();
       
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -157,6 +157,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       if (error) throw error;
+
+      // Create profile record if user was created successfully
+      if (data.user) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            email: data.user.email || email,
+            first_name: firstName,
+            last_name: lastName,
+            role: 'candidate' as const,
+          });
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          // Don't throw here as the user account was created successfully
+        }
+      }
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Signup failed' });
     } finally {
