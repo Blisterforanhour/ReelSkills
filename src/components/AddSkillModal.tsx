@@ -35,7 +35,9 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!name.trim()) {
       setError('Skill name is required');
       return;
@@ -45,11 +47,17 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
     setError(null);
     
     try {
-      await onSave({ name: name.trim(), category, proficiency });
-      // Reset form
+      await onSave({ 
+        name: name.trim(), 
+        category, 
+        proficiency 
+      });
+      
+      // Reset form on successful save
       setName('');
       setCategory('technical');
       setProficiency('beginner');
+      setError(null);
       onClose();
     } catch (error) {
       console.error('Error saving skill:', error);
@@ -89,103 +97,108 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
             </button>
           </div>
 
-          {/* Content */}
-          <div className="p-6 space-y-6">
-            {/* Error Display */}
-            {error && (
-              <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3">
-                <p className="text-red-300 text-sm">{error}</p>
+          {/* Form */}
+          <form onSubmit={handleSubmit}>
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Error Display */}
+              {error && (
+                <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3">
+                  <p className="text-red-300 text-sm">{error}</p>
+                </div>
+              )}
+
+              {/* Skill Name */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Skill Name</label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g., React, Python, Leadership, Spanish"
+                  autoFocus
+                  disabled={isSaving}
+                  required
+                />
               </div>
-            )}
 
-            {/* Skill Name */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">Skill Name</label>
-              <input
-                type="text"
-                className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., React, Python, Leadership, Spanish"
-                autoFocus
-                disabled={isSaving}
-              />
-            </div>
+              {/* Category Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-3">Category</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {categories.map((cat) => {
+                    const Icon = cat.icon;
+                    return (
+                      <button
+                        key={cat.value}
+                        type="button"
+                        onClick={() => setCategory(cat.value)}
+                        disabled={isSaving}
+                        className={`p-4 rounded-xl border transition-all text-left disabled:opacity-50 ${
+                          category === cat.value
+                            ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
+                            : 'border-slate-600/50 bg-slate-700/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 mb-2">
+                          <Icon size={20} />
+                          <span className="font-medium">{cat.label}</span>
+                        </div>
+                        <p className="text-xs opacity-75">{cat.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-            {/* Category Selection */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-3">Category</label>
-              <div className="grid grid-cols-2 gap-3">
-                {categories.map((cat) => {
-                  const Icon = cat.icon;
-                  return (
+              {/* Proficiency Selection */}
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-3">Proficiency Level</label>
+                <div className="space-y-2">
+                  {proficiencies.map((prof) => (
                     <button
-                      key={cat.value}
+                      key={prof.value}
                       type="button"
-                      onClick={() => setCategory(cat.value)}
+                      onClick={() => setProficiency(prof.value)}
                       disabled={isSaving}
-                      className={`p-4 rounded-xl border transition-all text-left disabled:opacity-50 ${
-                        category === cat.value
+                      className={`w-full p-3 rounded-lg border transition-all text-left disabled:opacity-50 ${
+                        proficiency === prof.value
                           ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
                           : 'border-slate-600/50 bg-slate-700/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/50'
                       }`}
                     >
-                      <div className="flex items-center gap-3 mb-2">
-                        <Icon size={20} />
-                        <span className="font-medium">{cat.label}</span>
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{prof.label}</span>
+                        <span className="text-xs opacity-75">{prof.description}</span>
                       </div>
-                      <p className="text-xs opacity-75">{cat.description}</p>
                     </button>
-                  );
-                })}
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Proficiency Selection */}
-            <div>
-              <label className="block text-sm font-medium text-slate-300 mb-3">Proficiency Level</label>
-              <div className="space-y-2">
-                {proficiencies.map((prof) => (
-                  <button
-                    key={prof.value}
-                    type="button"
-                    onClick={() => setProficiency(prof.value)}
-                    disabled={isSaving}
-                    className={`w-full p-3 rounded-lg border transition-all text-left disabled:opacity-50 ${
-                      proficiency === prof.value
-                        ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
-                        : 'border-slate-600/50 bg-slate-700/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">{prof.label}</span>
-                      <span className="text-xs opacity-75">{prof.description}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
+            {/* Footer */}
+            <div className="flex justify-end gap-3 p-6 border-t border-slate-700/50">
+              <Button 
+                type="button"
+                variant="outline" 
+                onClick={handleClose} 
+                disabled={isSaving}
+                className="border-slate-600/50 text-slate-300 hover:bg-slate-700/50"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit"
+                disabled={isSaving || !name.trim()}
+                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-slate-600 disabled:to-slate-700"
+              >
+                <Plus size={16} className="mr-2" />
+                {isSaving ? 'Adding...' : 'Add Skill'}
+              </Button>
             </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex justify-end gap-3 p-6 border-t border-slate-700/50">
-            <Button 
-              variant="outline" 
-              onClick={handleClose} 
-              disabled={isSaving}
-              className="border-slate-600/50 text-slate-300 hover:bg-slate-700/50"
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleSubmit} 
-              disabled={isSaving || !name.trim()}
-              className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-slate-600 disabled:to-slate-700"
-            >
-              <Plus size={16} className="mr-2" />
-              {isSaving ? 'Adding...' : 'Add Skill'}
-            </Button>
-          </div>
+          </form>
         </Dialog.Panel>
       </div>
     </Dialog>
