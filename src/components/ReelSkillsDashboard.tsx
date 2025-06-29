@@ -377,7 +377,7 @@ const ReelSkillsDashboard: React.FC = () => {
                     className={`p-4 rounded-xl border transition-all text-left ${
                       currentSkill?.id === skill.id
                         ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
-                        : 'border-slate-600/30 bg-slate-700/20 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/30'
+                        : 'border-slate-600/30 bg-slate-800/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/40'
                     }`}
                   >
                     <div className="font-medium mb-1">{skill.name}</div>
