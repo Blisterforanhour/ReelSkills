@@ -4,7 +4,8 @@ import { Button } from './ui/Button';
 import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
 import { VideoUploadModal } from './VideoUploadModal';
-import { Target, Plus, Brain, Star, Award, Video, ArrowRight, Lightbulb, AlertCircle, RefreshCw, Play, Upload, CheckCircle, Clock, TrendingUp } from 'lucide-react';
+import { SkillDetailModal } from './SkillDetailModal';
+import { Target, Plus, Brain, Star, Award, Video, ArrowRight, Lightbulb, AlertCircle, RefreshCw, Play, Upload, CheckCircle, Clock, TrendingUp, Edit, BookOpen, Certificate } from 'lucide-react';
 
 interface Skill {
   id: string;
@@ -32,6 +33,7 @@ interface AIImprovement {
   priority: 'low' | 'medium' | 'high' | 'critical';
   actionable: boolean;
   estimatedTime?: string;
+  actionData?: any;
 }
 
 const ReelSkillsDashboard: React.FC = () => {
@@ -42,6 +44,7 @@ const ReelSkillsDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showVideoUpload, setShowVideoUpload] = useState(false);
+  const [showSkillDetail, setShowSkillDetail] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creatingProfile, setCreatingProfile] = useState(false);
   const [loadingImprovements, setLoadingImprovements] = useState(false);
@@ -139,7 +142,8 @@ const ReelSkillsDashboard: React.FC = () => {
         description: 'Upload a video showing your skills in action. This increases profile credibility by 300%.',
         priority: 'critical',
         actionable: true,
-        estimatedTime: '30 minutes'
+        estimatedTime: '30 minutes',
+        actionData: { action: 'upload_video' }
       });
     } else if (!skill.video_verified) {
       improvements.push({
@@ -148,7 +152,8 @@ const ReelSkillsDashboard: React.FC = () => {
         description: 'Your video needs AI analysis for verification. This will provide detailed feedback.',
         priority: 'high',
         actionable: true,
-        estimatedTime: '5 minutes'
+        estimatedTime: '5 minutes',
+        actionData: { action: 'analyze_video' }
       });
     }
 
@@ -160,19 +165,39 @@ const ReelSkillsDashboard: React.FC = () => {
         description: 'Document your years of experience to show skill maturity.',
         priority: 'medium',
         actionable: true,
-        estimatedTime: '2 minutes'
+        estimatedTime: '2 minutes',
+        actionData: { action: 'edit_experience' }
+      });
+    }
+
+    // Description enhancement
+    if (!skill.description || skill.description.length < 50) {
+      improvements.push({
+        type: 'experience',
+        title: 'Enhance Skill Description',
+        description: 'Add a detailed description of your experience and projects with this skill.',
+        priority: 'medium',
+        actionable: true,
+        estimatedTime: '5 minutes',
+        actionData: { action: 'edit_description' }
       });
     }
 
     // Proficiency advancement
     if (skill.proficiency !== 'master' && skill.years_experience > 0) {
+      const nextLevel = getNextProficiencyLevel(skill.proficiency);
       improvements.push({
         type: 'proficiency',
-        title: 'Advance Proficiency Level',
-        description: `With ${skill.years_experience} years of experience, consider advancing from ${skill.proficiency} to the next level.`,
+        title: `Advance to ${nextLevel} Level`,
+        description: `With ${skill.years_experience} years of experience, consider advancing from ${skill.proficiency} to ${nextLevel}.`,
         priority: 'medium',
         actionable: true,
-        estimatedTime: '1 week of focused learning'
+        estimatedTime: '1-2 weeks of focused learning',
+        actionData: { 
+          action: 'advance_proficiency',
+          currentLevel: skill.proficiency,
+          nextLevel: nextLevel
+        }
       });
     }
 
@@ -184,7 +209,16 @@ const ReelSkillsDashboard: React.FC = () => {
         description: 'Focus on basic exercises and tutorials to strengthen your foundation.',
         priority: 'high',
         actionable: true,
-        estimatedTime: '2-3 weeks'
+        estimatedTime: '2-3 weeks',
+        actionData: { 
+          action: 'practice_resources',
+          level: 'beginner',
+          resources: [
+            'Complete online tutorials',
+            'Build 2-3 simple projects',
+            'Join beginner communities'
+          ]
+        }
       });
     }
 
@@ -196,7 +230,12 @@ const ReelSkillsDashboard: React.FC = () => {
         description: 'Get industry-recognized certification to validate your expertise.',
         priority: 'medium',
         actionable: true,
-        estimatedTime: '4-6 weeks'
+        estimatedTime: '4-6 weeks',
+        actionData: { 
+          action: 'certification_guide',
+          skillName: skill.name,
+          certifications: getCertificationSuggestions(skill.name)
+        }
       });
     }
 
@@ -204,6 +243,146 @@ const ReelSkillsDashboard: React.FC = () => {
       const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
       return priorityOrder[b.priority] - priorityOrder[a.priority];
     });
+  };
+
+  const getNextProficiencyLevel = (current: string) => {
+    switch (current) {
+      case 'beginner': return 'intermediate';
+      case 'intermediate': return 'advanced';
+      case 'advanced': return 'expert';
+      case 'expert': return 'master';
+      default: return 'master';
+    }
+  };
+
+  const getCertificationSuggestions = (skillName: string): string[] => {
+    const certMap: Record<string, string[]> = {
+      'JavaScript': ['JavaScript Institute Certification', 'Meta Front-End Developer'],
+      'React': ['Meta React Developer', 'React Certification by HackerRank'],
+      'Python': ['Python Institute PCAP', 'Microsoft Python Certification'],
+      'AWS': ['AWS Certified Solutions Architect', 'AWS Certified Developer'],
+      'Azure': ['Azure Fundamentals', 'Azure Developer Associate'],
+      'Docker': ['Docker Certified Associate', 'Kubernetes Certification'],
+      'Node.js': ['Node.js Certification', 'OpenJS Node.js Services Developer']
+    };
+    
+    return certMap[skillName] || ['Industry-specific certification', 'Professional development course'];
+  };
+
+  const handleTakeAction = async (improvement: AIImprovement) => {
+    if (!currentSkill || !improvement.actionData) return;
+
+    const { action } = improvement.actionData;
+
+    switch (action) {
+      case 'upload_video':
+      case 'analyze_video':
+        setShowVideoUpload(true);
+        break;
+
+      case 'edit_experience':
+      case 'edit_description':
+        setShowSkillDetail(true);
+        break;
+
+      case 'advance_proficiency':
+        await handleAdvanceProficiency(improvement.actionData);
+        break;
+
+      case 'practice_resources':
+        showPracticeResources(improvement.actionData);
+        break;
+
+      case 'certification_guide':
+        showCertificationGuide(improvement.actionData);
+        break;
+
+      default:
+        console.log('Unknown action:', action);
+    }
+  };
+
+  const handleAdvanceProficiency = async (actionData: any) => {
+    if (!currentSkill) return;
+
+    const confirmed = window.confirm(
+      `Are you ready to advance your ${currentSkill.name} skills from ${actionData.currentLevel} to ${actionData.nextLevel}? This should reflect your actual skill level.`
+    );
+
+    if (confirmed) {
+      try {
+        const { error } = await supabase
+          .from('skills')
+          .update({ proficiency: actionData.nextLevel })
+          .eq('id', currentSkill.id);
+
+        if (error) throw error;
+
+        // Update local state
+        const updatedSkill = { ...currentSkill, proficiency: actionData.nextLevel };
+        setCurrentSkill(updatedSkill);
+        setSkills(prev => prev.map(skill => 
+          skill.id === currentSkill.id ? updatedSkill : skill
+        ));
+
+        // Refresh improvements
+        const newImprovements = generateImprovements(updatedSkill);
+        setImprovements(newImprovements);
+
+        alert(`Congratulations! Your ${currentSkill.name} proficiency has been advanced to ${actionData.nextLevel} level.`);
+      } catch (error) {
+        console.error('Error updating proficiency:', error);
+        alert('Failed to update proficiency. Please try again.');
+      }
+    }
+  };
+
+  const showPracticeResources = (actionData: any) => {
+    const { resources, level } = actionData;
+    const resourceList = resources.join('\n• ');
+    
+    alert(`Practice Resources for ${level} level:\n\n• ${resourceList}\n\nThese activities will help strengthen your foundation and prepare you for the next level.`);
+  };
+
+  const showCertificationGuide = (actionData: any) => {
+    const { skillName, certifications } = actionData;
+    const certList = certifications.join('\n• ');
+    
+    alert(`Recommended Certifications for ${skillName}:\n\n• ${certList}\n\nThese certifications will validate your expertise and boost your professional credibility.`);
+  };
+
+  const handleUpdateSkill = async (skillId: string, updates: Partial<Skill>) => {
+    try {
+      const { data, error } = await supabase
+        .from('skills')
+        .update({
+          years_experience: updates.years_experience,
+          description: updates.description,
+          video_demo_url: updates.video_demo_url,
+        })
+        .eq('id', skillId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        const updatedSkill = { ...currentSkill, ...updates, updated_at: data.updated_at };
+        setCurrentSkill(updatedSkill);
+        setSkills(prev => prev.map(skill => 
+          skill.id === skillId ? updatedSkill : skill
+        ));
+
+        // Refresh improvements after update
+        if (currentSkill) {
+          const newImprovements = generateImprovements(updatedSkill);
+          setImprovements(newImprovements);
+        }
+      }
+    } catch (error) {
+      console.error('Error updating skill:', error);
+      throw error;
+    }
   };
 
   useEffect(() => {
@@ -303,6 +482,10 @@ const ReelSkillsDashboard: React.FC = () => {
         setSkills(prev => prev.map(skill => 
           skill.id === currentSkill.id ? updatedSkill : skill
         ));
+
+        // Refresh improvements after video analysis
+        const newImprovements = generateImprovements(updatedSkill);
+        setImprovements(newImprovements);
       }
     } catch (error) {
       console.error('Error updating skill:', error);
@@ -322,9 +505,9 @@ const ReelSkillsDashboard: React.FC = () => {
   const getImprovementIcon = (type: string) => {
     switch (type) {
       case 'video': return Video;
-      case 'practice': return Target;
-      case 'certification': return Award;
-      case 'experience': return Clock;
+      case 'practice': return BookOpen;
+      case 'certification': return Certificate;
+      case 'experience': return Edit;
       case 'proficiency': return TrendingUp;
       default: return Lightbulb;
     }
@@ -617,12 +800,7 @@ const ReelSkillsDashboard: React.FC = () => {
                           {improvement.actionable && (
                             <Button
                               size="small"
-                              onClick={() => {
-                                if (improvement.type === 'video') {
-                                  setShowVideoUpload(true);
-                                }
-                                // Add other action handlers as needed
-                              }}
+                              onClick={() => handleTakeAction(improvement)}
                               className="bg-blue-600/80 hover:bg-blue-700/80"
                             >
                               <ArrowRight size={14} className="mr-1" />
@@ -654,6 +832,16 @@ const ReelSkillsDashboard: React.FC = () => {
             skillId={currentSkill.id}
             skillName={currentSkill.name}
             onVideoAnalyzed={handleVideoAnalyzed}
+          />
+        )}
+
+        {/* Skill Detail Modal */}
+        {currentSkill && (
+          <SkillDetailModal
+            skill={currentSkill}
+            isOpen={showSkillDetail}
+            onClose={() => setShowSkillDetail(false)}
+            onUpdate={handleUpdateSkill}
           />
         )}
       </div>
