@@ -5,7 +5,7 @@ import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
 import { VideoUploadModal } from './VideoUploadModal';
 import { SkillDetailModal } from './SkillDetailModal';
-import { Target, Plus, Brain, Star, Award, Video, CheckCircle, Upload, Play, Edit, AlertCircle } from 'lucide-react';
+import { Target, Plus, Brain, Star, Award, Video, CheckCircle, Upload, Play, Edit, AlertCircle, Sparkles } from 'lucide-react';
 
 interface Skill {
   id: string;
@@ -208,7 +208,15 @@ const ReelSkillsDashboard: React.FC = () => {
     }
   };
 
-  const handleVideoAnalyzed = async (result: { rating: number | null; feedback: string | null; verified: boolean; message?: string }) => {
+  const handleVideoAnalyzed = async (result: { 
+    rating: number | null; 
+    feedback: string | null; 
+    verified: boolean; 
+    message?: string;
+    strengths?: string[];
+    improvements?: string[];
+    confidence?: number;
+  }) => {
     if (!currentSkill) return;
     
     try {
@@ -244,8 +252,14 @@ const ReelSkillsDashboard: React.FC = () => {
         ));
       }
 
-      // Show message if AI analysis is not yet available
-      if (result.message) {
+      // Show success message for Gemini analysis
+      if (result.rating && result.feedback) {
+        const strengthsText = result.strengths ? `\n\nStrengths:\n• ${result.strengths.join('\n• ')}` : '';
+        const improvementsText = result.improvements ? `\n\nAreas for improvement:\n• ${result.improvements.join('\n• ')}` : '';
+        const confidenceText = result.confidence ? `\n\nAI Confidence: ${result.confidence}%` : '';
+        
+        alert(`🎉 Gemini AI Analysis Complete!\n\nRating: ${result.rating}/5 stars\n\n${result.feedback}${strengthsText}${improvementsText}${confidenceText}`);
+      } else if (result.message) {
         alert(result.message);
       }
     } catch (error) {
@@ -318,8 +332,10 @@ const ReelSkillsDashboard: React.FC = () => {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-cyan-400 bg-clip-text text-transparent mb-2">
             ReelSkills
           </h1>
-          <p className="text-slate-400 text-lg">
-            Showcase your expertise with video demonstrations
+          <p className="text-slate-400 text-lg flex items-center justify-center gap-2">
+            <Sparkles size={20} className="text-purple-400" />
+            Powered by Google Gemini AI
+            <Sparkles size={20} className="text-purple-400" />
           </p>
         </div>
 
@@ -342,7 +358,7 @@ const ReelSkillsDashboard: React.FC = () => {
               <Target size={64} className="text-slate-400 mx-auto mb-6" />
               <h3 className="text-2xl font-semibold text-white mb-4">Start Your Journey</h3>
               <p className="text-slate-400 mb-8">
-                Add your first skill and create ReelSkills to showcase your expertise with video demonstrations.
+                Add your first skill and create ReelSkills to showcase your expertise with AI-powered video analysis.
               </p>
               <Button 
                 onClick={() => setIsModalOpen(true)}
@@ -385,7 +401,7 @@ const ReelSkillsDashboard: React.FC = () => {
                     {skill.video_verified && (
                       <div className="flex items-center gap-1 mt-2">
                         <CheckCircle size={12} className="text-green-400" />
-                        <span className="text-xs text-green-400">ReelSkill Verified</span>
+                        <span className="text-xs text-green-400">Gemini Verified</span>
                       </div>
                     )}
                     {skill.video_demo_url && !skill.video_verified && (
@@ -415,7 +431,7 @@ const ReelSkillsDashboard: React.FC = () => {
                   {/* AI Rating - only show if exists */}
                   {currentSkill.ai_rating && (
                     <div className="flex items-center justify-center gap-2 mt-4">
-                      <span className="text-slate-400">AI Rating:</span>
+                      <span className="text-slate-400">Gemini AI Rating:</span>
                       <div className="flex items-center gap-1">
                         {[...Array(5)].map((_, i) => (
                           <Star
@@ -438,17 +454,17 @@ const ReelSkillsDashboard: React.FC = () => {
                       onClick={() => setShowVideoUpload(true)}
                       className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-xl px-12 py-6 rounded-2xl"
                     >
-                      <Upload size={24} className="mr-3" />
-                      Upload Your ReelSkill
+                      <Brain size={24} className="mr-3" />
+                      Upload & Analyze with Gemini AI
                     </Button>
                   ) : currentSkill.video_verified ? (
                     <div className="bg-green-500/20 border border-green-500/30 rounded-2xl p-6">
                       <div className="flex items-center justify-center gap-3 mb-3">
                         <CheckCircle size={24} className="text-green-400" />
-                        <span className="text-xl font-bold text-green-300">ReelSkill Verified!</span>
+                        <span className="text-xl font-bold text-green-300">Gemini AI Verified!</span>
                       </div>
                       <p className="text-slate-300">
-                        Your {currentSkill.name} ReelSkill has been AI-verified. Great work!
+                        Your {currentSkill.name} ReelSkill has been analyzed and verified by Google Gemini AI. Excellent work!
                       </p>
                       <Button
                         onClick={() => window.open(currentSkill.video_demo_url, '_blank')}
@@ -463,10 +479,10 @@ const ReelSkillsDashboard: React.FC = () => {
                     <div className="bg-blue-500/20 border border-blue-500/30 rounded-2xl p-6">
                       <div className="flex items-center justify-center gap-3 mb-3">
                         <Video size={24} className="text-blue-400" />
-                        <span className="text-xl font-bold text-blue-300">ReelSkill Uploaded</span>
+                        <span className="text-xl font-bold text-blue-300">ReelSkill Ready for Analysis</span>
                       </div>
                       <p className="text-slate-300 mb-4">
-                        Your {currentSkill.name} ReelSkill is ready for viewing. AI analysis will be available when integrated.
+                        Your {currentSkill.name} ReelSkill is uploaded and ready for Gemini AI analysis.
                       </p>
                       <div className="flex justify-center gap-3">
                         <Button
@@ -479,10 +495,10 @@ const ReelSkillsDashboard: React.FC = () => {
                         </Button>
                         <Button
                           onClick={() => setShowVideoUpload(true)}
-                          className="bg-blue-600/80 hover:bg-blue-700/80"
+                          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
                         >
-                          <Upload size={16} className="mr-2" />
-                          Update ReelSkill
+                          <Brain size={16} className="mr-2" />
+                          Analyze with Gemini AI
                         </Button>
                       </div>
                     </div>
@@ -494,7 +510,7 @@ const ReelSkillsDashboard: React.FC = () => {
                   <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-6 mb-8">
                     <div className="flex items-center gap-3 mb-3">
                       <Brain size={20} className="text-purple-400" />
-                      <h3 className="font-semibold text-white">AI ReelSkill Feedback</h3>
+                      <h3 className="font-semibold text-white">Gemini AI Feedback</h3>
                     </div>
                     <p className="text-slate-300">{currentSkill.ai_feedback}</p>
                   </div>
@@ -516,8 +532,8 @@ const ReelSkillsDashboard: React.FC = () => {
                       onClick={() => setShowVideoUpload(true)}
                       className="border-purple-500/30 text-purple-300"
                     >
-                      <Video size={16} className="mr-2" />
-                      Update ReelSkill
+                      <Brain size={16} className="mr-2" />
+                      Re-analyze with Gemini
                     </Button>
                   )}
                 </div>

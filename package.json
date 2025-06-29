@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.478.0",
+    "@google/generative-ai": "^0.21.0",
     "@headlessui/react": "^1.7.17",
     "@supabase/supabase-js": "^2.39.0",
     "clsx": "^2.0.0",

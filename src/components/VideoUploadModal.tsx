@@ -1,14 +1,22 @@
 import React, { useState, useRef } from 'react';
 import { Dialog } from '@headlessui/react';
 import { Button } from './ui/Button';
-import { X, Upload, Video, AlertCircle, CheckCircle, FileVideo, Cloud, Play } from 'lucide-react';
+import { X, Upload, Video, AlertCircle, CheckCircle, FileVideo, Cloud, Play, Brain, Star } from 'lucide-react';
 
 interface VideoUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   skillId: string;
   skillName: string;
-  onVideoAnalyzed: (result: { rating: number; feedback: string; verified: boolean }) => void;
+  onVideoAnalyzed: (result: { 
+    rating: number | null; 
+    feedback: string | null; 
+    verified: boolean; 
+    message?: string;
+    strengths?: string[];
+    improvements?: string[];
+    confidence?: number;
+  }) => void;
 }
 
 export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
@@ -24,6 +32,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -83,6 +92,20 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
     });
   };
 
+  const simulateAnalysisProgress = () => {
+    setAnalysisProgress(0);
+    const interval = setInterval(() => {
+      setAnalysisProgress(prev => {
+        if (prev >= 90) {
+          clearInterval(interval);
+          return 90;
+        }
+        return prev + Math.random() * 15;
+      });
+    }, 500);
+    return interval;
+  };
+
   const handleAnalyze = async () => {
     let finalVideoUrl = '';
 
@@ -113,6 +136,9 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
 
     setIsUploading(false);
     setIsAnalyzing(true);
+    
+    // Start progress simulation
+    const progressInterval = simulateAnalysisProgress();
 
     try {
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-skill-video`, {
@@ -131,18 +157,37 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
 
       const result = await response.json();
 
+      // Clear progress simulation
+      clearInterval(progressInterval);
+      setAnalysisProgress(100);
+
       if (!response.ok) {
         throw new Error(result.error || 'ReelSkill analysis failed');
       }
 
-      onVideoAnalyzed(result);
-      resetForm();
-      onClose();
+      // Wait a moment to show 100% completion
+      setTimeout(() => {
+        onVideoAnalyzed({
+          rating: result.rating,
+          feedback: result.feedback,
+          verified: result.verified,
+          strengths: result.strengths,
+          improvements: result.improvements,
+          confidence: result.confidence
+        });
+        resetForm();
+        onClose();
+      }, 1000);
+
     } catch (error) {
+      clearInterval(progressInterval);
       console.error('ReelSkill analysis error:', error);
       setError(error instanceof Error ? error.message : 'ReelSkill analysis failed');
     } finally {
-      setIsAnalyzing(false);
+      setTimeout(() => {
+        setIsAnalyzing(false);
+        setAnalysisProgress(0);
+      }, 1000);
     }
   };
 
@@ -150,6 +195,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
     setVideoFile(null);
     setVideoUrl('');
     setUploadProgress(0);
+    setAnalysisProgress(0);
     setError(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
@@ -344,33 +390,52 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
               {/* Analysis Status */}
               {isAnalyzing && (
                 <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-purple-400"></div>
-                    <div>
-                      <h4 className="font-semibold text-white text-sm sm:text-base">Analyzing Your ReelSkill...</h4>
-                      <p className="text-slate-300 text-xs sm:text-sm">
-                        Our AI is reviewing your {skillName} ReelSkill demonstration. This may take a few moments.
-                      </p>
-                    </div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <Brain size={20} className="text-purple-400" />
+                    <h4 className="font-semibold text-white text-sm sm:text-base">Gemini AI Analyzing Your ReelSkill...</h4>
                   </div>
+                  <div className="w-full bg-slate-700/30 rounded-full h-2 sm:h-3 mb-2">
+                    <div 
+                      className="bg-gradient-to-r from-purple-500 to-pink-400 h-2 sm:h-3 rounded-full transition-all duration-500"
+                      style={{ width: `${analysisProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-slate-300 text-xs sm:text-sm">
+                    {analysisProgress < 30 ? 'Processing video content...' :
+                     analysisProgress < 60 ? 'Analyzing skill demonstration...' :
+                     analysisProgress < 90 ? 'Generating feedback and rating...' :
+                     'Finalizing assessment...'}
+                  </p>
                 </div>
               )}
 
-              {/* AI Analysis Info */}
+              {/* Gemini AI Analysis Info */}
               {!isProcessing && (
-                <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
+                <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl p-4">
                   <div className="flex items-center gap-3 mb-2">
-                    <Play size={18} className="sm:w-5 sm:h-5 text-purple-400" />
-                    <h4 className="font-semibold text-white text-sm sm:text-base">AI-Powered ReelSkill Analysis</h4>
+                    <Brain size={18} className="sm:w-5 sm:h-5 text-purple-400" />
+                    <h4 className="font-semibold text-white text-sm sm:text-base">Powered by Google Gemini AI</h4>
                   </div>
-                  <p className="text-slate-300 text-xs sm:text-sm">
-                    Our AI will analyze your ReelSkill demonstration and provide:
+                  <p className="text-slate-300 text-xs sm:text-sm mb-3">
+                    Advanced multimodal AI will analyze your ReelSkill and provide:
                   </p>
-                  <ul className="text-slate-300 text-xs sm:text-sm mt-2 space-y-1">
-                    <li>• Skill proficiency assessment (1-5 stars)</li>
-                    <li>• Detailed feedback and improvement suggestions</li>
-                    <li>• ReelSkill verification status for your portfolio</li>
-                    <li>• Personalized learning recommendations</li>
+                  <ul className="text-slate-300 text-xs sm:text-sm space-y-1">
+                    <li className="flex items-center gap-2">
+                      <Star size={12} className="text-yellow-400" />
+                      Skill proficiency rating (1-5 stars)
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle size={12} className="text-green-400" />
+                      Detailed technical feedback
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Brain size={12} className="text-purple-400" />
+                      Strengths and improvement areas
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Video size={12} className="text-blue-400" />
+                      ReelSkill verification status
+                    </li>
                   </ul>
                 </div>
               )}
@@ -405,22 +470,22 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                   (uploadMethod === 'file' && !videoFile) || 
                   (uploadMethod === 'url' && !videoUrl.trim())
                 }
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-slate-600 disabled:to-slate-700 w-full sm:w-auto order-1 sm:order-2"
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-700 w-full sm:w-auto order-1 sm:order-2"
               >
                 {isUploading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Uploading ReelSkill... {uploadProgress}%
+                    Uploading... {uploadProgress}%
                   </>
                 ) : isAnalyzing ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Analyzing ReelSkill...
+                    <Brain size={16} className="mr-2" />
+                    Gemini AI Analyzing...
                   </>
                 ) : (
                   <>
-                    <Upload size={16} className="mr-2" />
-                    {uploadMethod === 'file' ? 'Upload ReelSkill' : 'Analyze ReelSkill'}
+                    <Brain size={16} className="mr-2" />
+                    Analyze with Gemini AI
                   </>
                 )}
               </Button>
