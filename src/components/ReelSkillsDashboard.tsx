@@ -3,7 +3,7 @@ import { useAuthStore } from '../lib/auth';
 import { Button } from './ui/Button';
 import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
-import { Target, Plus, Brain, TrendingUp, BookOpen, Zap, ArrowRight, Lightbulb, CheckCircle, Clock, Star, Award, Code, Users, Globe, AlignCenterVertical as Certificate, Eye, Sparkles } from 'lucide-react';
+import { Target, Plus, Brain, TrendingUp, BookOpen, Zap, ArrowRight, Lightbulb, CheckCircle, Clock, Star, Award, Code, Users, Globe, AlignCenterVertical as Certificate, Eye, Sparkles, AlertCircle } from 'lucide-react';
 
 interface Skill {
   id: string;
@@ -24,15 +24,41 @@ interface AIInsight {
 }
 
 const ReelSkillsDashboard: React.FC = () => {
-  const { user, profile } = useAuthStore();
+  const { user, profile, createProfile } = useAuthStore();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [creatingProfile, setCreatingProfile] = useState(false);
 
   const supabase = getSupabaseClient();
+
+  const handleCreateProfile = async () => {
+    if (!user?.email) return;
+    
+    setCreatingProfile(true);
+    setError(null);
+    
+    try {
+      const newProfile = await createProfile(
+        user.id,
+        user.email,
+        user.user_metadata?.first_name,
+        user.user_metadata?.last_name
+      );
+      
+      if (!newProfile) {
+        setError('Failed to create profile. Please try refreshing the page.');
+      }
+    } catch (error) {
+      console.error('Error creating profile:', error);
+      setError('Failed to create profile. Please try refreshing the page.');
+    } finally {
+      setCreatingProfile(false);
+    }
+  };
 
   const fetchSkills = async () => {
     if (!profile?.id) {
@@ -113,7 +139,7 @@ const ReelSkillsDashboard: React.FC = () => {
 
   const handleSave = async ({ name, category, proficiency }: Omit<Skill, 'id' | 'status'>) => {
     if (!profile?.id) {
-      setError('Profile not found');
+      setError('Profile not found. Please refresh the page.');
       return;
     }
 
@@ -157,6 +183,60 @@ const ReelSkillsDashboard: React.FC = () => {
       throw error;
     }
   };
+
+  // If user exists but no profile, show profile creation
+  if (user && !profile && !creatingProfile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ 
+        background: 'radial-gradient(ellipse at center, #1E293B 0%, #0F172A 100%)',
+        backgroundAttachment: 'fixed'
+      }}>
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-8">
+            <AlertCircle size={48} className="text-yellow-400 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-white mb-2">Profile Setup Required</h2>
+            <p className="text-slate-400 mb-6">
+              We need to set up your profile to get started with ReelSkills.
+            </p>
+            {error && (
+              <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 mb-4">
+                <p className="text-red-300 text-sm">{error}</p>
+              </div>
+            )}
+            <Button 
+              onClick={handleCreateProfile}
+              className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+              disabled={creatingProfile}
+            >
+              {creatingProfile ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Creating Profile...
+                </>
+              ) : (
+                'Create Profile'
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading while creating profile
+  if (creatingProfile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ 
+        background: 'radial-gradient(ellipse at center, #1E293B 0%, #0F172A 100%)',
+        backgroundAttachment: 'fixed'
+      }}>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-white text-lg">Setting up your profile...</p>
+        </div>
+      </div>
+    );
+  }
 
   const getCategoryIcon = (category: string) => {
     switch (category) {

@@ -25,6 +25,7 @@ interface AuthState {
   signup: (email: string, password: string, firstName?: string, lastName?: string) => Promise<void>;
   logout: () => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
+  createProfile: (userId: string, email: string, firstName?: string, lastName?: string) => Promise<Profile | null>;
 }
 
 // Global Supabase client
@@ -52,6 +53,34 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   error: null,
 
+  createProfile: async (userId: string, email: string, firstName?: string, lastName?: string) => {
+    try {
+      const supabase = getSupabaseClient();
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: userId,
+          email: email,
+          first_name: firstName || null,
+          last_name: lastName || null,
+          role: 'candidate' as const,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Profile creation error:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Profile creation error:', error);
+      return null;
+    }
+  },
+
   initialize: async () => {
     try {
       set({ isInitializing: true, error: null });
@@ -69,11 +98,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           .eq('id', session.user.id)
           .limit(1);
 
-        if (profileError) {
-          console.error('Profile fetch error:', profileError);
+        let profile = profiles && profiles.length > 0 ? profiles[0] : null;
+
+        // If profile doesn't exist, create it
+        if (!profile && session.user.email) {
+          console.log('Profile not found, creating new profile...');
+          profile = await get().createProfile(
+            session.user.id,
+            session.user.email,
+            session.user.user_metadata?.first_name,
+            session.user.user_metadata?.last_name
+          );
         }
 
-        const profile = profiles && profiles.length > 0 ? profiles[0] : null;
+        if (profileError && profileError.code !== 'PGRST116') {
+          console.error('Profile fetch error:', profileError);
+        }
 
         set({
           user: session.user,
@@ -101,7 +141,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             .eq('id', session.user.id)
             .limit(1);
 
-          const profile = profiles && profiles.length > 0 ? profiles[0] : null;
+          let profile = profiles && profiles.length > 0 ? profiles[0] : null;
+
+          // If profile doesn't exist, create it
+          if (!profile && session.user.email) {
+            console.log('Profile not found during auth change, creating new profile...');
+            profile = await get().createProfile(
+              session.user.id,
+              session.user.email,
+              session.user.user_metadata?.first_name,
+              session.user.user_metadata?.last_name
+            );
+          }
 
           set({
             user: session.user,
@@ -163,20 +214,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (error) throw error;
 
       // Create profile record if user was created successfully
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            email: data.user.email || email,
-            first_name: firstName,
-            last_name: lastName,
-            role: 'candidate' as const,
-          });
+      if (data.user && data.user.email) {
+        const profile = await get().createProfile(
+          data.user.id,
+          data.user.email,
+          firstName,
+          lastName
+        );
 
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          // Don't throw here as the user account was created successfully
+        if (!profile) {
+          console.warn('Profile creation failed during signup, but user account was created');
         }
       }
     } catch (error) {
