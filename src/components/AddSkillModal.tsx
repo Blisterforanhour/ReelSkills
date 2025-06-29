@@ -82,10 +82,10 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" aria-hidden="true" />
       
-      {/* Dialog Container - Made responsive and scrollable */}
-      <div className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 overflow-y-auto">
-        <div className="w-full min-h-full sm:min-h-0 flex items-start sm:items-center justify-center py-4 sm:py-0">
-          <Dialog.Panel className="w-full max-w-lg bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-2xl my-auto">
+      {/* Dialog Container - Full screen on mobile, centered on desktop */}
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="min-h-full flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <Dialog.Panel className="w-full max-w-lg bg-slate-800/95 backdrop-blur-sm border-0 sm:border border-slate-700/50 rounded-t-xl sm:rounded-xl shadow-2xl transform transition-all">
             {/* Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-700/50">
               <Dialog.Title className="text-lg sm:text-xl font-bold text-white">Add New Skill</Dialog.Title>
@@ -99,9 +99,9 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit}>
-              {/* Content */}
-              <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-h-[calc(100vh-200px)] sm:max-h-none overflow-y-auto">
+            <form onSubmit={handleSubmit} className="flex flex-col h-full">
+              {/* Scrollable Content */}
+              <div className="flex-1 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto max-h-[calc(100vh-140px)] sm:max-h-none">
                 {/* Error Display */}
                 {error && (
                   <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3">
@@ -169,13 +169,9 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
                             : 'border-slate-600/50 bg-slate-700/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/50'
                         }`}
                       >
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                           <span className="font-medium text-sm sm:text-base">{prof.label}</span>
-                          <span className="text-xs opacity-75 hidden sm:inline">{prof.description}</span>
-                        </div>
-                        {/* Show description on mobile below the label */}
-                        <div className="sm:hidden">
-                          <span className="text-xs opacity-75">{prof.description}</span>
+                          <span className="text-xs opacity-75 mt-1 sm:mt-0">{prof.description}</span>
                         </div>
                       </button>
                     ))}
@@ -183,8 +179,8 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
                 </div>
               </div>
 
-              {/* Footer - Sticky on mobile */}
-              <div className="flex flex-col sm:flex-row justify-end gap-3 p-4 sm:p-6 border-t border-slate-700/50 bg-slate-800/95 rounded-b-xl">
+              {/* Fixed Footer */}
+              <div className="flex flex-col sm:flex-row justify-end gap-3 p-4 sm:p-6 border-t border-slate-700/50 bg-slate-800/95">
                 <Button 
                   type="button"
                   variant="outline" 
