@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useAuthStore } from '@reelapps/auth';
-import { Card, Button } from '@reelapps/ui';
-import { getSupabaseClient } from '@reelapps/auth';
+import { useAuthStore } from '../lib/auth';
+import { Card } from './ui/Card';
+import { Button } from './ui/Button';
+import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
 import { 
   Target, 
@@ -135,26 +136,30 @@ const ReelSkillsDashboard: React.FC = () => {
     const fetchSkills = async () => {
       if (!profile?.id) return;
       setLoading(true);
-      const { data, error } = await supabase
-        .from('skills')
-        .select('*')
-        .eq('profile_id', profile.id);
+      try {
+        const { data, error } = await supabase
+          .from('skills')
+          .select('*')
+          .eq('profile_id', profile.id);
 
-      if (!error && data && data.length > 0) {
-        setSkills(
-          data.map((row: any) => ({
-            id: row.id,
-            name: row.name,
-            category: row.category,
-            proficiency: row.proficiency,
-            demonstrationMethod: 'code',
-            status: row.verified ? 'verified' : 'planned',
-            rating: row.ai_rating ?? undefined,
-            verifiedAt: row.verified ? row.updated_at : undefined,
-            progress: Math.random() * 100,
-            marketDemand: ['low', 'medium', 'high', 'critical'][Math.floor(Math.random() * 4)] as any,
-          }))
-        );
+        if (!error && data && data.length > 0) {
+          setSkills(
+            data.map((row: any) => ({
+              id: row.id,
+              name: row.name,
+              category: row.category,
+              proficiency: row.proficiency,
+              demonstrationMethod: 'code',
+              status: row.verified ? 'verified' : 'planned',
+              rating: row.ai_rating ?? undefined,
+              verifiedAt: row.verified ? row.updated_at : undefined,
+              progress: Math.random() * 100,
+              marketDemand: ['low', 'medium', 'high', 'critical'][Math.floor(Math.random() * 4)] as any,
+            }))
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching skills:', error);
       }
       setLoading(false);
     };
@@ -238,32 +243,36 @@ const ReelSkillsDashboard: React.FC = () => {
 
   const handleSave = async ({ name, category, proficiency, demonstrationMethod }: Omit<Skill, 'id' | 'status'>) => {
     if (!profile?.id) return;
-    const { data, error } = await supabase
-      .from('skills')
-      .insert({
-        profile_id: profile.id,
-        name,
-        category,
-        proficiency,
-        years_experience: 0,
-        description: null,
-      })
-      .select()
-      .single();
+    try {
+      const { data, error } = await supabase
+        .from('skills')
+        .insert({
+          profile_id: profile.id,
+          name,
+          category,
+          proficiency,
+          years_experience: 0,
+          description: null,
+        })
+        .select()
+        .single();
 
-    if (!error && data) {
-      const newSkill: Skill = {
-        id: data.id,
-        name: data.name,
-        category: data.category,
-        proficiency: data.proficiency,
-        demonstrationMethod: 'code',
-        status: data.verified ? 'verified' : 'planned',
-        progress: 0,
-        marketDemand: 'medium',
-        aiInsights: ['New skill added - start with fundamentals']
-      };
-      setSkills(prev => [...prev, newSkill]);
+      if (!error && data) {
+        const newSkill: Skill = {
+          id: data.id,
+          name: data.name,
+          category: data.category,
+          proficiency: data.proficiency,
+          demonstrationMethod: 'code',
+          status: data.verified ? 'verified' : 'planned',
+          progress: 0,
+          marketDemand: 'medium',
+          aiInsights: ['New skill added - start with fundamentals']
+        };
+        setSkills(prev => [...prev, newSkill]);
+      }
+    } catch (error) {
+      console.error('Error saving skill:', error);
     }
   };
 

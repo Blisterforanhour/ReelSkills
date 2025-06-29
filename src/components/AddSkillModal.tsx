@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Dialog } from '@headlessui/react';
-import { Button } from '@reelapps/ui';
+import { Button } from './ui/Button';
 import { Upload, X } from 'lucide-react';
 
 interface AddSkillModalProps {
@@ -147,4 +147,4 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
       </div>
     </Dialog>
   );
-}; 
+};

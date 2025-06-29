@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { useAuthStore, initializeSupabase } from '@reelapps/auth'
-import { AppWrapper } from '@reelapps/ui'
+import { useAuthStore, initializeSupabase } from './lib/auth'
+import { AppWrapper } from './components/ui/AppWrapper'
 import ReelSkillsDashboard from './components/ReelSkillsDashboard'
 import './index.css'
 
@@ -8,7 +8,7 @@ function App() {
   const {
     initialize,
     isLoading,
-    isInitializing: storeInitializing,
+    isInitializing,
     isAuthenticated,
     user,
     profile,
@@ -48,7 +48,7 @@ function App() {
   return (
     <AppWrapper
       isAuthenticated={isAuthenticated}
-      isInitializing={storeInitializing ?? false}
+      isInitializing={isInitializing ?? false}
       user={user}
       error={error ?? null}
       onLogin={login}
@@ -67,4 +67,4 @@ function App() {
   );
 }
 
-export default App 
+export default App
