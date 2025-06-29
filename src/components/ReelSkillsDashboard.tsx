@@ -241,6 +241,17 @@ const ReelSkillsDashboard: React.FC = () => {
     }
   };
 
+  const handleSkillClick = (skill: Skill) => {
+    setSelectedSkill(skill);
+  };
+
+  const handleInsightAction = (insight: AIInsight) => {
+    // Handle insight actions - could open modals, navigate, etc.
+    console.log('Acting on insight:', insight);
+    // For now, just show an alert
+    alert(`Taking action on: ${insight.title}`);
+  };
+
   // If user exists but no profile, show profile creation
   if (user && !profile && !creatingProfile) {
     return (
@@ -442,7 +453,11 @@ const ReelSkillsDashboard: React.FC = () => {
                       <h3 className="font-semibold text-white">{insight.title}</h3>
                     </div>
                     {insight.actionable && (
-                      <Button size="small" className="bg-blue-600/80 hover:bg-blue-700/80">
+                      <Button 
+                        size="small" 
+                        className="bg-blue-600/80 hover:bg-blue-700/80"
+                        onClick={() => handleInsightAction(insight)}
+                      >
                         <ArrowRight size={14} className="mr-1" />
                         Act
                       </Button>
@@ -499,7 +514,7 @@ const ReelSkillsDashboard: React.FC = () => {
                   <div
                     key={skill.id}
                     className="group bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6 hover:border-blue-500/30 transition-all duration-300 cursor-pointer"
-                    onClick={() => setSelectedSkill(skill)}
+                    onClick={() => handleSkillClick(skill)}
                   >
                     {/* Header */}
                     <div className="flex items-start justify-between mb-4">
@@ -561,7 +576,15 @@ const ReelSkillsDashboard: React.FC = () => {
                         )}
                       </div>
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="small" variant="outline" className="bg-slate-800/30 border-slate-600/30 text-slate-300">
+                        <Button 
+                          size="small" 
+                          variant="outline" 
+                          className="bg-slate-800/30 border-slate-600/30 text-slate-300"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSkillClick(skill);
+                          }}
+                        >
                           <Eye size={12} className="mr-1" />
                           View
                         </Button>

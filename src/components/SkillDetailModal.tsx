@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import { Button } from './ui/Button';
 import { X, Star, Award, Clock, TrendingUp, Video, FileText, Users, Calendar } from 'lucide-react';
@@ -35,10 +35,19 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
   onUpdate
 }) => {
   const [isEditing, setIsEditing] = useState(false);
-  const [yearsExperience, setYearsExperience] = useState(skill?.years_experience || 0);
-  const [description, setDescription] = useState(skill?.description || '');
-  const [videoUrl, setVideoUrl] = useState(skill?.video_demo_url || '');
+  const [yearsExperience, setYearsExperience] = useState(0);
+  const [description, setDescription] = useState('');
+  const [videoUrl, setVideoUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Update local state when skill changes
+  useEffect(() => {
+    if (skill) {
+      setYearsExperience(skill.years_experience || 0);
+      setDescription(skill.description || '');
+      setVideoUrl(skill.video_demo_url || '');
+    }
+  }, [skill]);
 
   if (!skill) return null;
 
@@ -47,15 +56,24 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
     try {
       await onUpdate(skill.id, {
         years_experience: yearsExperience,
-        description,
-        video_demo_url: videoUrl || undefined,
+        description: description.trim() || undefined,
+        video_demo_url: videoUrl.trim() || undefined,
       });
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating skill:', error);
+      alert('Failed to update skill. Please try again.');
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleCancel = () => {
+    // Reset to original values
+    setYearsExperience(skill.years_experience || 0);
+    setDescription(skill.description || '');
+    setVideoUrl(skill.video_demo_url || '');
+    setIsEditing(false);
   };
 
   const getProficiencyDescription = (proficiency: string) => {
@@ -92,14 +110,16 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
               <Button
                 variant="outline"
                 size="small"
-                onClick={() => setIsEditing(!isEditing)}
+                onClick={() => isEditing ? handleCancel() : setIsEditing(true)}
                 className="border-slate-600/50 text-slate-300"
+                disabled={isSaving}
               >
                 {isEditing ? 'Cancel' : 'Edit'}
               </Button>
               <button
                 onClick={onClose}
-                className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+                disabled={isSaving}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors disabled:opacity-50"
               >
                 <X size={20} />
               </button>
@@ -142,12 +162,14 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                     <input
                       type="number"
                       min="0"
+                      max="50"
                       value={yearsExperience}
                       onChange={(e) => setYearsExperience(parseInt(e.target.value) || 0)}
                       className="w-16 bg-slate-600/50 border border-slate-500/50 rounded text-center text-white"
+                      disabled={isSaving}
                     />
                   ) : (
-                    skill.years_experience
+                    yearsExperience
                   )}
                 </div>
                 <div className="text-sm text-slate-400">Years Experience</div>
@@ -207,7 +229,8 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Describe your experience with this skill..."
-                  className="w-full h-24 bg-slate-600/50 border border-slate-500/50 rounded-lg p-3 text-white placeholder-slate-400 resize-none"
+                  className="w-full h-24 bg-slate-600/50 border border-slate-500/50 rounded-lg p-3 text-white placeholder-slate-400 resize-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
+                  disabled={isSaving}
                 />
               ) : (
                 <p className="text-slate-300 text-sm">
@@ -234,7 +257,8 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
                   placeholder="https://youtube.com/watch?v=..."
-                  className="w-full bg-slate-600/50 border border-slate-500/50 rounded-lg p-3 text-white placeholder-slate-400"
+                  className="w-full bg-slate-600/50 border border-slate-500/50 rounded-lg p-3 text-white placeholder-slate-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20"
+                  disabled={isSaving}
                 />
               ) : skill.video_demo_url ? (
                 <div>
@@ -298,17 +322,25 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
             <div className="flex justify-end gap-3 p-6 border-t border-slate-700/50">
               <Button 
                 variant="outline" 
-                onClick={() => setIsEditing(false)}
+                onClick={handleCancel}
                 className="border-slate-600/50 text-slate-300"
+                disabled={isSaving}
               >
                 Cancel
               </Button>
               <Button 
                 onClick={handleSave}
                 disabled={isSaving}
-                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-slate-600 disabled:to-slate-700"
               >
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
               </Button>
             </div>
           )}
