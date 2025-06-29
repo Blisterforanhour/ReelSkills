@@ -3,27 +3,7 @@ import { useAuthStore } from '../lib/auth';
 import { Button } from './ui/Button';
 import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
-import { 
-  Target, 
-  Plus, 
-  Brain,
-  TrendingUp,
-  BookOpen,
-  Zap,
-  ArrowRight,
-  Lightbulb,
-  CheckCircle,
-  Clock,
-  Star,
-  Award,
-  Code,
-  Users,
-  Globe,
-  Certificate,
-  PlayCircle,
-  Eye,
-  Sparkles
-} from 'lucide-react';
+import { Target, Plus, Brain, TrendingUp, BookOpen, Zap, ArrowRight, Lightbulb, CheckCircle, Clock, Star, Award, Code, Users, Globe, AlignCenterVertical as Certificate, PlayCircle, Eye, Sparkles } from 'lucide-react';
 
 interface Skill {
   id: string;
