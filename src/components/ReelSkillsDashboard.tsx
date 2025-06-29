@@ -144,7 +144,7 @@ const ReelSkillsDashboard: React.FC = () => {
         title: 'Get AI ReelSkill Verification',
         description: 'Your ReelSkill needs AI analysis for verification. This will provide detailed feedback.',
         priority: 'high',
-        actionable: true,
+        actionable: false, // Remove action button
         estimatedTime: '5 minutes',
         actionData: { action: 'analyze_video' }
       });
@@ -157,7 +157,7 @@ const ReelSkillsDashboard: React.FC = () => {
         title: 'Add Experience Details',
         description: 'Document your years of experience to show skill maturity.',
         priority: 'medium',
-        actionable: true,
+        actionable: false, // Remove action button
         estimatedTime: '2 minutes',
         actionData: { action: 'edit_experience' }
       });
@@ -170,7 +170,7 @@ const ReelSkillsDashboard: React.FC = () => {
         title: 'Enhance Skill Description',
         description: 'Add a detailed description of your experience and projects with this skill.',
         priority: 'medium',
-        actionable: true,
+        actionable: false, // Remove action button
         estimatedTime: '5 minutes',
         actionData: { action: 'edit_description' }
       });
@@ -184,7 +184,7 @@ const ReelSkillsDashboard: React.FC = () => {
         title: `Advance to ${nextLevel} Level`,
         description: `With ${skill.years_experience} years of experience, consider advancing from ${skill.proficiency} to ${nextLevel}.`,
         priority: 'medium',
-        actionable: true,
+        actionable: false, // Remove action button
         estimatedTime: '1-2 weeks of focused learning',
         actionData: { 
           action: 'advance_proficiency',
@@ -201,7 +201,7 @@ const ReelSkillsDashboard: React.FC = () => {
         title: 'Complete Foundational Practice',
         description: 'Focus on basic exercises and tutorials to strengthen your foundation.',
         priority: 'high',
-        actionable: true,
+        actionable: false, // Remove action button
         estimatedTime: '2-3 weeks',
         actionData: { 
           action: 'practice_resources',
@@ -222,7 +222,7 @@ const ReelSkillsDashboard: React.FC = () => {
         title: 'Earn Professional Certification',
         description: 'Get industry-recognized certification to validate your expertise.',
         priority: 'medium',
-        actionable: true,
+        actionable: false, // Remove action button
         estimatedTime: '4-6 weeks',
         actionData: { 
           action: 'certification_guide',
@@ -260,88 +260,6 @@ const ReelSkillsDashboard: React.FC = () => {
     };
     
     return certMap[skillName] || ['Industry-specific certification', 'Professional development course'];
-  };
-
-  const handleTakeAction = async (improvement: AIImprovement) => {
-    if (!currentSkill || !improvement.actionData) return;
-
-    const { action } = improvement.actionData;
-
-    switch (action) {
-      case 'upload_video':
-      case 'analyze_video':
-        setShowVideoUpload(true);
-        break;
-
-      case 'edit_experience':
-      case 'edit_description':
-        setShowSkillDetail(true);
-        break;
-
-      case 'advance_proficiency':
-        await handleAdvanceProficiency(improvement.actionData);
-        break;
-
-      case 'practice_resources':
-        showPracticeResources(improvement.actionData);
-        break;
-
-      case 'certification_guide':
-        showCertificationGuide(improvement.actionData);
-        break;
-
-      default:
-        console.log('Unknown action:', action);
-    }
-  };
-
-  const handleAdvanceProficiency = async (actionData: any) => {
-    if (!currentSkill) return;
-
-    const confirmed = window.confirm(
-      `Are you ready to advance your ${currentSkill.name} skills from ${actionData.currentLevel} to ${actionData.nextLevel}? This should reflect your actual skill level.`
-    );
-
-    if (confirmed) {
-      try {
-        const { error } = await supabase
-          .from('skills')
-          .update({ proficiency: actionData.nextLevel })
-          .eq('id', currentSkill.id);
-
-        if (error) throw error;
-
-        // Update local state
-        const updatedSkill = { ...currentSkill, proficiency: actionData.nextLevel };
-        setCurrentSkill(updatedSkill);
-        setSkills(prev => prev.map(skill => 
-          skill.id === currentSkill.id ? updatedSkill : skill
-        ));
-
-        // Refresh improvements
-        const newImprovements = generateImprovements(updatedSkill);
-        setImprovements(newImprovements);
-
-        alert(`Congratulations! Your ${currentSkill.name} proficiency has been advanced to ${actionData.nextLevel} level.`);
-      } catch (error) {
-        console.error('Error updating proficiency:', error);
-        alert('Failed to update proficiency. Please try again.');
-      }
-    }
-  };
-
-  const showPracticeResources = (actionData: any) => {
-    const { resources, level } = actionData;
-    const resourceList = resources.join('\n• ');
-    
-    alert(`Practice Resources for ${level} level:\n\n• ${resourceList}\n\nThese activities will help strengthen your foundation and prepare you for the next level.`);
-  };
-
-  const showCertificationGuide = (actionData: any) => {
-    const { skillName, certifications } = actionData;
-    const certList = certifications.join('\n• ');
-    
-    alert(`Recommended Certifications for ${skillName}:\n\n• ${certList}\n\nThese certifications will validate your expertise and boost your professional credibility.`);
   };
 
   const handleUpdateSkill = async (skillId: string, updates: Partial<Skill>) => {
@@ -797,17 +715,8 @@ const ReelSkillsDashboard: React.FC = () => {
                               )}
                             </div>
                           </div>
-                          <p className="text-slate-300 text-sm mb-4">{improvement.description}</p>
-                          {improvement.actionable && (
-                            <Button
-                              size="small"
-                              onClick={() => handleTakeAction(improvement)}
-                              className="bg-blue-600/80 hover:bg-blue-700/80"
-                            >
-                              <ArrowRight size={14} className="mr-1" />
-                              Take Action
-                            </Button>
-                          )}
+                          <p className="text-slate-300 text-sm">{improvement.description}</p>
+                          {/* Removed Take Action button */}
                         </div>
                       );
                     })}
