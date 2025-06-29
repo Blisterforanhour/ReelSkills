@@ -4,6 +4,8 @@ import { Button } from './ui/Button';
 import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
 import { SkillDetailModal } from './SkillDetailModal';
+import { LearningPathModal } from './LearningPathModal';
+import { SkillRecommendationModal } from './SkillRecommendationModal';
 import { Target, Plus, Brain, TrendingUp, BookOpen, Zap, ArrowRight, Lightbulb, CheckCircle, Clock, Star, Award, Code, Users, Globe, AlignCenterVertical as Certificate, Eye, Sparkles, AlertCircle } from 'lucide-react';
 
 interface Skill {
@@ -31,6 +33,7 @@ interface AIInsight {
   description: string;
   actionable: boolean;
   priority: 'low' | 'medium' | 'high' | 'critical';
+  data?: any; // Additional data for the insight
 }
 
 const ReelSkillsDashboard: React.FC = () => {
@@ -42,6 +45,10 @@ const ReelSkillsDashboard: React.FC = () => {
   const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [creatingProfile, setCreatingProfile] = useState(false);
+  
+  // New modal states
+  const [learningPathModal, setLearningPathModal] = useState<{ isOpen: boolean; skill?: Skill }>({ isOpen: false });
+  const [skillRecommendationModal, setSkillRecommendationModal] = useState<{ isOpen: boolean; recommendations?: string[] }>({ isOpen: false });
 
   const supabase = getSupabaseClient();
 
@@ -127,29 +134,58 @@ const ReelSkillsDashboard: React.FC = () => {
   // Generate AI insights based on current skills
   useEffect(() => {
     if (skills.length > 0) {
-      const insights: AIInsight[] = [
-        {
-          type: 'recommendation',
+      const insights: AIInsight[] = [];
+      
+      // Find skills that can be advanced
+      const skillsToAdvance = skills.filter(skill => 
+        skill.proficiency !== 'master' && skill.years_experience > 0
+      );
+      
+      if (skillsToAdvance.length > 0) {
+        insights.push({
+          type: 'learning-path',
           title: 'Complete Your Learning Path',
-          description: `Focus on advancing your ${skills[0]?.name || 'primary'} skills to the next proficiency level.`,
+          description: `Focus on advancing your ${skillsToAdvance[0].name} skills to the next proficiency level.`,
           actionable: true,
-          priority: 'high'
-        },
-        {
-          type: 'market-trend',
-          title: 'High-Demand Skills Alert',
-          description: 'AI and Machine Learning skills are seeing 40% growth in job postings this quarter.',
-          actionable: true,
-          priority: 'critical'
-        },
-        {
+          priority: 'high',
+          data: { skill: skillsToAdvance[0] }
+        });
+      }
+
+      // Market trend insight
+      insights.push({
+        type: 'market-trend',
+        title: 'High-Demand Skills Alert',
+        description: 'AI and Machine Learning skills are seeing 40% growth in job postings this quarter.',
+        actionable: true,
+        priority: 'critical',
+        data: { 
+          trendingSkills: ['Artificial Intelligence', 'Machine Learning', 'Python', 'Data Science'],
+          growthRate: 40
+        }
+      });
+
+      // Skill gap analysis
+      const hasCloudSkills = skills.some(skill => 
+        skill.name.toLowerCase().includes('cloud') || 
+        skill.name.toLowerCase().includes('aws') || 
+        skill.name.toLowerCase().includes('azure')
+      );
+      
+      if (!hasCloudSkills && skills.some(skill => skill.category === 'technical')) {
+        insights.push({
           type: 'skill-gap',
           title: 'Skill Gap Analysis',
           description: 'Consider adding cloud computing skills to complement your technical stack.',
           actionable: true,
-          priority: 'medium'
-        }
-      ];
+          priority: 'medium',
+          data: { 
+            recommendedSkills: ['AWS', 'Azure', 'Google Cloud', 'Docker', 'Kubernetes'],
+            reason: 'Cloud skills complement your existing technical expertise'
+          }
+        });
+      }
+
       setAiInsights(insights);
     } else {
       setAiInsights([]);
@@ -246,10 +282,42 @@ const ReelSkillsDashboard: React.FC = () => {
   };
 
   const handleInsightAction = (insight: AIInsight) => {
-    // Handle insight actions - could open modals, navigate, etc.
-    console.log('Acting on insight:', insight);
-    // For now, just show an alert
-    alert(`Taking action on: ${insight.title}`);
+    switch (insight.type) {
+      case 'learning-path':
+        // Open learning path modal for the specific skill
+        if (insight.data?.skill) {
+          setLearningPathModal({ isOpen: true, skill: insight.data.skill });
+        }
+        break;
+        
+      case 'skill-gap':
+        // Open skill recommendation modal
+        if (insight.data?.recommendedSkills) {
+          setSkillRecommendationModal({ 
+            isOpen: true, 
+            recommendations: insight.data.recommendedSkills 
+          });
+        }
+        break;
+        
+      case 'market-trend':
+        // Open skill recommendation modal with trending skills
+        if (insight.data?.trendingSkills) {
+          setSkillRecommendationModal({ 
+            isOpen: true, 
+            recommendations: insight.data.trendingSkills 
+          });
+        }
+        break;
+        
+      case 'recommendation':
+        // Generic recommendation - could open a general guidance modal
+        alert(`Recommendation: ${insight.description}`);
+        break;
+        
+      default:
+        console.log('Acting on insight:', insight);
+    }
   };
 
   // If user exists but no profile, show profile creation
@@ -610,6 +678,25 @@ const ReelSkillsDashboard: React.FC = () => {
           isOpen={!!selectedSkill}
           onClose={() => setSelectedSkill(null)}
           onUpdate={handleUpdateSkill}
+        />
+
+        {/* Learning Path Modal */}
+        <LearningPathModal
+          skill={learningPathModal.skill}
+          isOpen={learningPathModal.isOpen}
+          onClose={() => setLearningPathModal({ isOpen: false })}
+        />
+
+        {/* Skill Recommendation Modal */}
+        <SkillRecommendationModal
+          recommendations={skillRecommendationModal.recommendations || []}
+          isOpen={skillRecommendationModal.isOpen}
+          onClose={() => setSkillRecommendationModal({ isOpen: false })}
+          onAddSkill={(skillName) => {
+            // Auto-fill the add skill modal with the recommended skill
+            setSkillRecommendationModal({ isOpen: false });
+            setIsModalOpen(true);
+          }}
         />
       </div>
     </div>
