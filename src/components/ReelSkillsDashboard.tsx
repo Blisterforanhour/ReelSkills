@@ -5,7 +5,7 @@ import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
 import { VideoUploadModal } from './VideoUploadModal';
 import { SkillDetailModal } from './SkillDetailModal';
-import { Target, Plus, Brain, Star, Award, Video, ArrowRight, Lightbulb, AlertCircle, RefreshCw, Play, Upload, CheckCircle, Clock, TrendingUp, Edit, BookOpen, AlignCenterVertical as Certificate } from 'lucide-react';
+import { Target, Plus, Brain, Star, Award, Video, CheckCircle, Upload, Play, Edit } from 'lucide-react';
 
 interface Skill {
   id: string;
@@ -26,28 +26,16 @@ interface Skill {
   updated_at?: string;
 }
 
-interface AIImprovement {
-  type: 'video' | 'practice' | 'certification' | 'experience' | 'proficiency';
-  title: string;
-  description: string;
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  actionable: boolean;
-  estimatedTime?: string;
-  actionData?: any;
-}
-
 const ReelSkillsDashboard: React.FC = () => {
   const { user, profile, createProfile } = useAuthStore();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [currentSkill, setCurrentSkill] = useState<Skill | null>(null);
-  const [improvements, setImprovements] = useState<AIImprovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [showVideoUpload, setShowVideoUpload] = useState(false);
   const [showSkillDetail, setShowSkillDetail] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creatingProfile, setCreatingProfile] = useState(false);
-  const [loadingImprovements, setLoadingImprovements] = useState(false);
 
   const supabase = getSupabaseClient();
 
@@ -131,137 +119,6 @@ const ReelSkillsDashboard: React.FC = () => {
     }
   };
 
-  const generateImprovements = (skill: Skill): AIImprovement[] => {
-    const improvements: AIImprovement[] = [];
-
-    // Only show video suggestion if no video exists
-    if (!skill.video_demo_url) {
-      // Don't add the "Create Your First ReelSkill" suggestion here
-      // This will be handled by the main action button instead
-    } else if (!skill.video_verified) {
-      improvements.push({
-        type: 'video',
-        title: 'Get AI ReelSkill Verification',
-        description: 'Your ReelSkill needs AI analysis for verification. This will provide detailed feedback.',
-        priority: 'high',
-        actionable: false, // Remove action button
-        estimatedTime: '5 minutes',
-        actionData: { action: 'analyze_video' }
-      });
-    }
-
-    // Experience tracking
-    if (skill.years_experience === 0) {
-      improvements.push({
-        type: 'experience',
-        title: 'Add Experience Details',
-        description: 'Document your years of experience to show skill maturity.',
-        priority: 'medium',
-        actionable: false, // Remove action button
-        estimatedTime: '2 minutes',
-        actionData: { action: 'edit_experience' }
-      });
-    }
-
-    // Description enhancement
-    if (!skill.description || skill.description.length < 50) {
-      improvements.push({
-        type: 'experience',
-        title: 'Enhance Skill Description',
-        description: 'Add a detailed description of your experience and projects with this skill.',
-        priority: 'medium',
-        actionable: false, // Remove action button
-        estimatedTime: '5 minutes',
-        actionData: { action: 'edit_description' }
-      });
-    }
-
-    // Proficiency advancement
-    if (skill.proficiency !== 'master' && skill.years_experience > 0) {
-      const nextLevel = getNextProficiencyLevel(skill.proficiency);
-      improvements.push({
-        type: 'proficiency',
-        title: `Advance to ${nextLevel} Level`,
-        description: `With ${skill.years_experience} years of experience, consider advancing from ${skill.proficiency} to ${nextLevel}.`,
-        priority: 'medium',
-        actionable: false, // Remove action button
-        estimatedTime: '1-2 weeks of focused learning',
-        actionData: { 
-          action: 'advance_proficiency',
-          currentLevel: skill.proficiency,
-          nextLevel: nextLevel
-        }
-      });
-    }
-
-    // Practice suggestions based on proficiency
-    if (skill.proficiency === 'beginner') {
-      improvements.push({
-        type: 'practice',
-        title: 'Complete Foundational Practice',
-        description: 'Focus on basic exercises and tutorials to strengthen your foundation.',
-        priority: 'high',
-        actionable: false, // Remove action button
-        estimatedTime: '2-3 weeks',
-        actionData: { 
-          action: 'practice_resources',
-          level: 'beginner',
-          resources: [
-            'Complete online tutorials',
-            'Build 2-3 simple projects',
-            'Join beginner communities'
-          ]
-        }
-      });
-    }
-
-    // Certification for advanced skills
-    if ((skill.proficiency === 'advanced' || skill.proficiency === 'expert') && skill.category === 'technical') {
-      improvements.push({
-        type: 'certification',
-        title: 'Earn Professional Certification',
-        description: 'Get industry-recognized certification to validate your expertise.',
-        priority: 'medium',
-        actionable: false, // Remove action button
-        estimatedTime: '4-6 weeks',
-        actionData: { 
-          action: 'certification_guide',
-          skillName: skill.name,
-          certifications: getCertificationSuggestions(skill.name)
-        }
-      });
-    }
-
-    return improvements.sort((a, b) => {
-      const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
-      return priorityOrder[b.priority] - priorityOrder[a.priority];
-    });
-  };
-
-  const getNextProficiencyLevel = (current: string) => {
-    switch (current) {
-      case 'beginner': return 'intermediate';
-      case 'intermediate': return 'advanced';
-      case 'advanced': return 'expert';
-      case 'expert': return 'master';
-      default: return 'master';
-    }
-  };
-
-  const getCertificationSuggestions = (skillName: string): string[] => {
-    const certMap: Record<string, string[]> = {
-      'JavaScript': ['JavaScript Institute Certification', 'Meta Front-End Developer'],
-      'React': ['Meta React Developer', 'React Certification by HackerRank'],
-      'Python': ['Python Institute PCAP', 'Microsoft Python Certification'],
-      'AWS': ['AWS Certified Solutions Architect', 'AWS Certified Developer'],
-      'Azure': ['Azure Fundamentals', 'Azure Developer Associate'],
-      'Docker': ['Docker Certified Associate', 'Kubernetes Certification'],
-      'Node.js': ['Node.js Certification', 'OpenJS Node.js Services Developer']
-    };
-    
-    return certMap[skillName] || ['Industry-specific certification', 'Professional development course'];
-  };
-
   const handleUpdateSkill = async (skillId: string, updates: Partial<Skill>) => {
     try {
       const { data, error } = await supabase
@@ -283,12 +140,6 @@ const ReelSkillsDashboard: React.FC = () => {
         setSkills(prev => prev.map(skill => 
           skill.id === skillId ? updatedSkill : skill
         ));
-
-        // Refresh improvements after update
-        if (currentSkill) {
-          const newImprovements = generateImprovements(updatedSkill);
-          setImprovements(newImprovements);
-        }
       }
     } catch (error) {
       console.error('Error updating skill:', error);
@@ -299,18 +150,6 @@ const ReelSkillsDashboard: React.FC = () => {
   useEffect(() => {
     fetchSkills();
   }, [profile?.id]);
-
-  useEffect(() => {
-    if (currentSkill) {
-      setLoadingImprovements(true);
-      // Simulate AI processing time
-      setTimeout(() => {
-        const skillImprovements = generateImprovements(currentSkill);
-        setImprovements(skillImprovements);
-        setLoadingImprovements(false);
-      }, 1000);
-    }
-  }, [currentSkill]);
 
   const handleSave = async ({ name, category, proficiency }: Omit<Skill, 'id' | 'status' | 'years_experience' | 'verified' | 'endorsements' | 'video_verified'>) => {
     if (!profile?.id) {
@@ -393,34 +232,9 @@ const ReelSkillsDashboard: React.FC = () => {
         setSkills(prev => prev.map(skill => 
           skill.id === currentSkill.id ? updatedSkill : skill
         ));
-
-        // Refresh improvements after video analysis
-        const newImprovements = generateImprovements(updatedSkill);
-        setImprovements(newImprovements);
       }
     } catch (error) {
       console.error('Error updating skill:', error);
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical': return 'border-red-500/30 bg-red-500/5 text-red-300';
-      case 'high': return 'border-orange-500/30 bg-orange-500/5 text-orange-300';
-      case 'medium': return 'border-yellow-500/30 bg-yellow-500/5 text-yellow-300';
-      case 'low': return 'border-blue-500/30 bg-blue-500/5 text-blue-300';
-      default: return 'border-slate-500/30 bg-slate-500/5 text-slate-300';
-    }
-  };
-
-  const getImprovementIcon = (type: string) => {
-    switch (type) {
-      case 'video': return Video;
-      case 'practice': return BookOpen;
-      case 'certification': return Certificate;
-      case 'experience': return Edit;
-      case 'proficiency': return TrendingUp;
-      default: return Lightbulb;
     }
   };
 
@@ -433,7 +247,7 @@ const ReelSkillsDashboard: React.FC = () => {
       }}>
         <div className="text-center max-w-md mx-auto p-6">
           <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-8">
-            <AlertCircle size={48} className="text-yellow-400 mx-auto mb-4" />
+            <Target size={48} className="text-yellow-400 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-white mb-2">Profile Setup Required</h2>
             <p className="text-slate-400 mb-6">
               We need to set up your profile to get started with ReelSkills.
@@ -513,7 +327,7 @@ const ReelSkillsDashboard: React.FC = () => {
               <Target size={64} className="text-slate-400 mx-auto mb-6" />
               <h3 className="text-2xl font-semibold text-white mb-4">Start Your Journey</h3>
               <p className="text-slate-400 mb-8">
-                Add your first skill and let AI guide you to mastery with personalized improvement suggestions.
+                Add your first skill and create ReelSkills to showcase your expertise with video demonstrations.
               </p>
               <Button 
                 onClick={() => setIsModalOpen(true)}
@@ -647,81 +461,28 @@ const ReelSkillsDashboard: React.FC = () => {
                     <p className="text-slate-300">{currentSkill.ai_feedback}</p>
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* AI Improvements */}
-            {currentSkill && (
-              <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    <Lightbulb size={24} className="text-yellow-400" />
-                    <h3 className="text-xl font-bold text-white">AI Improvement Suggestions</h3>
-                  </div>
+                {/* Quick Actions */}
+                <div className="flex justify-center gap-4">
                   <Button
-                    size="small"
                     variant="outline"
-                    onClick={() => {
-                      setLoadingImprovements(true);
-                      setTimeout(() => {
-                        const skillImprovements = generateImprovements(currentSkill);
-                        setImprovements(skillImprovements);
-                        setLoadingImprovements(false);
-                      }, 1000);
-                    }}
-                    disabled={loadingImprovements}
+                    onClick={() => setShowSkillDetail(true)}
                     className="border-slate-600/50 text-slate-300"
                   >
-                    <RefreshCw size={14} className={`mr-1 ${loadingImprovements ? 'animate-spin' : ''}`} />
-                    Refresh
+                    <Edit size={16} className="mr-2" />
+                    Edit Details
                   </Button>
+                  {currentSkill.video_demo_url && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowVideoUpload(true)}
+                      className="border-purple-500/30 text-purple-300"
+                    >
+                      <Video size={16} className="mr-2" />
+                      Update ReelSkill
+                    </Button>
+                  )}
                 </div>
-
-                {loadingImprovements ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400 mr-3"></div>
-                    <span className="text-slate-300">Analyzing your skill...</span>
-                  </div>
-                ) : improvements.length === 0 ? (
-                  <div className="text-center py-8">
-                    <CheckCircle size={48} className="text-green-400 mx-auto mb-4" />
-                    <h4 className="text-lg font-semibold text-white mb-2">All Set!</h4>
-                    <p className="text-slate-400">
-                      Your {currentSkill.name} skill profile looks complete. Keep practicing and consider adding more skills!
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {improvements.map((improvement, index) => {
-                      const Icon = getImprovementIcon(improvement.type);
-                      return (
-                        <div
-                          key={index}
-                          className={`border rounded-xl p-6 ${getPriorityColor(improvement.priority)}`}
-                        >
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-center gap-3">
-                              <Icon size={20} />
-                              <h4 className="font-semibold">{improvement.title}</h4>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs px-2 py-1 rounded-full bg-current/20 capitalize">
-                                {improvement.priority}
-                              </span>
-                              {improvement.estimatedTime && (
-                                <span className="text-xs text-slate-400">
-                                  {improvement.estimatedTime}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <p className="text-slate-300 text-sm">{improvement.description}</p>
-                          {/* Removed Take Action button */}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             )}
           </div>
