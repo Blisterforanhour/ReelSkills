@@ -134,17 +134,10 @@ const ReelSkillsDashboard: React.FC = () => {
   const generateImprovements = (skill: Skill): AIImprovement[] => {
     const improvements: AIImprovement[] = [];
 
-    // ReelSkill video demonstration
+    // Only show video suggestion if no video exists
     if (!skill.video_demo_url) {
-      improvements.push({
-        type: 'video',
-        title: 'Create Your First ReelSkill',
-        description: 'Upload a ReelSkill video showing your skills in action. This increases profile credibility by 300%.',
-        priority: 'critical',
-        actionable: true,
-        estimatedTime: '30 minutes',
-        actionData: { action: 'upload_video' }
-      });
+      // Don't add the "Create Your First ReelSkill" suggestion here
+      // This will be handled by the main action button instead
     } else if (!skill.video_verified) {
       improvements.push({
         type: 'video',
@@ -770,6 +763,14 @@ const ReelSkillsDashboard: React.FC = () => {
                   <div className="flex items-center justify-center py-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400 mr-3"></div>
                     <span className="text-slate-300">Analyzing your skill...</span>
+                  </div>
+                ) : improvements.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CheckCircle size={48} className="text-green-400 mx-auto mb-4" />
+                    <h4 className="text-lg font-semibold text-white mb-2">All Set!</h4>
+                    <p className="text-slate-400">
+                      Your {currentSkill.name} skill profile looks complete. Keep practicing and consider adding more skills!
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-4">
