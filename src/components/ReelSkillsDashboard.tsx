@@ -3,10 +3,8 @@ import { useAuthStore } from '../lib/auth';
 import { Button } from './ui/Button';
 import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
-import { SkillDetailModal } from './SkillDetailModal';
-import { LearningPathModal } from './LearningPathModal';
-import { SkillRecommendationModal } from './SkillRecommendationModal';
-import { Target, Plus, Brain, TrendingUp, BookOpen, Zap, ArrowRight, Lightbulb, CheckCircle, Clock, Star, Award, Code, Users, Globe, AlignCenterVertical as Certificate, Eye, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
+import { VideoUploadModal } from './VideoUploadModal';
+import { Target, Plus, Brain, Star, Award, Video, ArrowRight, Lightbulb, AlertCircle, RefreshCw, Play, Upload, CheckCircle, Clock, TrendingUp } from 'lucide-react';
 
 interface Skill {
   id: string;
@@ -27,30 +25,26 @@ interface Skill {
   updated_at?: string;
 }
 
-interface AIInsight {
-  type: 'recommendation' | 'learning-path' | 'market-trend' | 'skill-gap';
+interface AIImprovement {
+  type: 'video' | 'practice' | 'certification' | 'experience' | 'proficiency';
   title: string;
   description: string;
-  actionable: boolean;
   priority: 'low' | 'medium' | 'high' | 'critical';
-  data?: any; // Additional data for the insight
+  actionable: boolean;
+  estimatedTime?: string;
 }
 
 const ReelSkillsDashboard: React.FC = () => {
   const { user, profile, createProfile } = useAuthStore();
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [currentSkill, setCurrentSkill] = useState<Skill | null>(null);
+  const [improvements, setImprovements] = useState<AIImprovement[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
-  const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
+  const [showVideoUpload, setShowVideoUpload] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creatingProfile, setCreatingProfile] = useState(false);
-  const [loadingInsights, setLoadingInsights] = useState(false);
-  const [insightsError, setInsightsError] = useState<string | null>(null);
-  
-  // New modal states
-  const [learningPathModal, setLearningPathModal] = useState<{ isOpen: boolean; skill?: Skill }>({ isOpen: false });
-  const [skillRecommendationModal, setSkillRecommendationModal] = useState<{ isOpen: boolean; recommendations?: string[] }>({ isOpen: false });
+  const [loadingImprovements, setLoadingImprovements] = useState(false);
 
   const supabase = getSupabaseClient();
 
@@ -119,6 +113,11 @@ const ReelSkillsDashboard: React.FC = () => {
           updated_at: row.updated_at,
         }));
         setSkills(formattedSkills);
+        
+        // Set the first skill as current if none selected
+        if (formattedSkills.length > 0 && !currentSkill) {
+          setCurrentSkill(formattedSkills[0]);
+        }
       }
     } catch (error) {
       console.error('Error fetching skills:', error);
@@ -129,111 +128,82 @@ const ReelSkillsDashboard: React.FC = () => {
     }
   };
 
-  const fetchAIInsights = async () => {
-    if (!profile?.id) return;
-    
-    setLoadingInsights(true);
-    setInsightsError(null);
-    
-    try {
-      // Check if environment variables are available
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseAnonKey) {
-        console.warn('Supabase environment variables not configured, using local insights');
-        generateLocalInsights();
-        return;
-      }
+  const generateImprovements = (skill: Skill): AIImprovement[] => {
+    const improvements: AIImprovement[] = [];
 
-      const response = await fetch(`${supabaseUrl}/functions/v1/generate-skill-insights`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          profileId: profile.id
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        if (result.insights && Array.isArray(result.insights)) {
-          setAiInsights(result.insights);
-        } else {
-          console.warn('Invalid insights response, using local insights');
-          generateLocalInsights();
-        }
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.warn('Edge function failed:', errorData);
-        setInsightsError('AI insights temporarily unavailable');
-        generateLocalInsights();
-      }
-    } catch (error) {
-      console.warn('Error fetching AI insights:', error);
-      setInsightsError('AI insights temporarily unavailable');
-      generateLocalInsights();
-    } finally {
-      setLoadingInsights(false);
-    }
-  };
-
-  const generateLocalInsights = () => {
-    const insights: AIInsight[] = [];
-    
-    // Find skills that can be advanced
-    const skillsToAdvance = skills.filter(skill => 
-      skill.proficiency !== 'master' && skill.years_experience > 0
-    );
-    
-    if (skillsToAdvance.length > 0) {
-      insights.push({
-        type: 'learning-path',
-        title: 'Complete Your Learning Path',
-        description: `Focus on advancing your ${skillsToAdvance[0].name} skills to the next proficiency level.`,
+    // Video demonstration
+    if (!skill.video_demo_url) {
+      improvements.push({
+        type: 'video',
+        title: 'Add Video Demonstration',
+        description: 'Upload a video showing your skills in action. This increases profile credibility by 300%.',
+        priority: 'critical',
         actionable: true,
+        estimatedTime: '30 minutes'
+      });
+    } else if (!skill.video_verified) {
+      improvements.push({
+        type: 'video',
+        title: 'Get AI Verification',
+        description: 'Your video needs AI analysis for verification. This will provide detailed feedback.',
         priority: 'high',
-        data: { skill: skillsToAdvance[0] }
-      });
-    }
-
-    // Market trend insight
-    insights.push({
-      type: 'market-trend',
-      title: 'High-Demand Skills Alert',
-      description: 'AI and Machine Learning skills are seeing 40% growth in job postings this quarter.',
-      actionable: true,
-      priority: 'critical',
-      data: { 
-        trendingSkills: ['Artificial Intelligence', 'Machine Learning', 'Python', 'Data Science'],
-        growthRate: 40
-      }
-    });
-
-    // Skill gap analysis
-    const hasCloudSkills = skills.some(skill => 
-      skill.name.toLowerCase().includes('cloud') || 
-      skill.name.toLowerCase().includes('aws') || 
-      skill.name.toLowerCase().includes('azure')
-    );
-    
-    if (!hasCloudSkills && skills.some(skill => skill.category === 'technical')) {
-      insights.push({
-        type: 'skill-gap',
-        title: 'Skill Gap Analysis',
-        description: 'Consider adding cloud computing skills to complement your technical stack.',
         actionable: true,
-        priority: 'medium',
-        data: { 
-          recommendedSkills: ['AWS', 'Azure', 'Google Cloud', 'Docker', 'Kubernetes'],
-          reason: 'Cloud skills complement your existing technical expertise'
-        }
+        estimatedTime: '5 minutes'
       });
     }
 
-    setAiInsights(insights);
+    // Experience tracking
+    if (skill.years_experience === 0) {
+      improvements.push({
+        type: 'experience',
+        title: 'Add Experience Details',
+        description: 'Document your years of experience to show skill maturity.',
+        priority: 'medium',
+        actionable: true,
+        estimatedTime: '2 minutes'
+      });
+    }
+
+    // Proficiency advancement
+    if (skill.proficiency !== 'master' && skill.years_experience > 0) {
+      improvements.push({
+        type: 'proficiency',
+        title: 'Advance Proficiency Level',
+        description: `With ${skill.years_experience} years of experience, consider advancing from ${skill.proficiency} to the next level.`,
+        priority: 'medium',
+        actionable: true,
+        estimatedTime: '1 week of focused learning'
+      });
+    }
+
+    // Practice suggestions based on proficiency
+    if (skill.proficiency === 'beginner') {
+      improvements.push({
+        type: 'practice',
+        title: 'Complete Foundational Practice',
+        description: 'Focus on basic exercises and tutorials to strengthen your foundation.',
+        priority: 'high',
+        actionable: true,
+        estimatedTime: '2-3 weeks'
+      });
+    }
+
+    // Certification for advanced skills
+    if ((skill.proficiency === 'advanced' || skill.proficiency === 'expert') && skill.category === 'technical') {
+      improvements.push({
+        type: 'certification',
+        title: 'Earn Professional Certification',
+        description: 'Get industry-recognized certification to validate your expertise.',
+        priority: 'medium',
+        actionable: true,
+        estimatedTime: '4-6 weeks'
+      });
+    }
+
+    return improvements.sort((a, b) => {
+      const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
+      return priorityOrder[b.priority] - priorityOrder[a.priority];
+    });
   };
 
   useEffect(() => {
@@ -241,12 +211,16 @@ const ReelSkillsDashboard: React.FC = () => {
   }, [profile?.id]);
 
   useEffect(() => {
-    if (skills.length > 0) {
-      fetchAIInsights();
-    } else {
-      setAiInsights([]);
+    if (currentSkill) {
+      setLoadingImprovements(true);
+      // Simulate AI processing time
+      setTimeout(() => {
+        const skillImprovements = generateImprovements(currentSkill);
+        setImprovements(skillImprovements);
+        setLoadingImprovements(false);
+      }, 1000);
     }
-  }, [skills, profile?.id]);
+  }, [currentSkill]);
 
   const handleSave = async ({ name, category, proficiency }: Omit<Skill, 'id' | 'status' | 'years_experience' | 'verified' | 'endorsements' | 'video_verified'>) => {
     if (!profile?.id) {
@@ -296,6 +270,7 @@ const ReelSkillsDashboard: React.FC = () => {
           updated_at: data.updated_at,
         };
         setSkills(prev => [newSkill, ...prev]);
+        setCurrentSkill(newSkill);
       }
     } catch (error) {
       console.error('Error saving skill:', error);
@@ -304,78 +279,54 @@ const ReelSkillsDashboard: React.FC = () => {
     }
   };
 
-  const handleUpdateSkill = async (skillId: string, updates: Partial<Skill>) => {
+  const handleVideoAnalyzed = async (result: { rating: number; feedback: string; verified: boolean }) => {
+    if (!currentSkill) return;
+    
     try {
       const { data, error } = await supabase
         .from('skills')
         .update({
-          years_experience: updates.years_experience,
-          description: updates.description,
-          video_demo_url: updates.video_demo_url,
-          ai_rating: updates.ai_rating,
-          ai_feedback: updates.ai_feedback,
-          video_verified: updates.video_verified,
+          ai_rating: result.rating,
+          ai_feedback: result.feedback,
+          video_verified: result.verified,
+          video_uploaded_at: new Date().toISOString(),
         })
-        .eq('id', skillId)
+        .eq('id', currentSkill.id)
         .select()
         .single();
 
       if (error) throw error;
 
       if (data) {
+        const updatedSkill = { ...currentSkill, ...data };
+        setCurrentSkill(updatedSkill);
         setSkills(prev => prev.map(skill => 
-          skill.id === skillId 
-            ? { ...skill, ...updates, updated_at: data.updated_at }
-            : skill
+          skill.id === currentSkill.id ? updatedSkill : skill
         ));
-        setSelectedSkill(prev => prev ? { ...prev, ...updates } : null);
       }
     } catch (error) {
       console.error('Error updating skill:', error);
-      throw error;
     }
   };
 
-  const handleSkillClick = (skill: Skill) => {
-    setSelectedSkill(skill);
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'critical': return 'border-red-500/30 bg-red-500/5 text-red-300';
+      case 'high': return 'border-orange-500/30 bg-orange-500/5 text-orange-300';
+      case 'medium': return 'border-yellow-500/30 bg-yellow-500/5 text-yellow-300';
+      case 'low': return 'border-blue-500/30 bg-blue-500/5 text-blue-300';
+      default: return 'border-slate-500/30 bg-slate-500/5 text-slate-300';
+    }
   };
 
-  const handleInsightAction = (insight: AIInsight) => {
-    switch (insight.type) {
-      case 'learning-path':
-        // Open learning path modal for the specific skill
-        if (insight.data?.skill) {
-          setLearningPathModal({ isOpen: true, skill: insight.data.skill });
-        }
-        break;
-        
-      case 'skill-gap':
-        // Open skill recommendation modal
-        if (insight.data?.recommendedSkills) {
-          setSkillRecommendationModal({ 
-            isOpen: true, 
-            recommendations: insight.data.recommendedSkills 
-          });
-        }
-        break;
-        
-      case 'market-trend':
-        // Open skill recommendation modal with trending skills
-        if (insight.data?.trendingSkills) {
-          setSkillRecommendationModal({ 
-            isOpen: true, 
-            recommendations: insight.data.trendingSkills 
-          });
-        }
-        break;
-        
-      case 'recommendation':
-        // Generic recommendation - could open a general guidance modal
-        alert(`Recommendation: ${insight.description}`);
-        break;
-        
-      default:
-        console.log('Acting on insight:', insight);
+  const getImprovementIcon = (type: string) => {
+    switch (type) {
+      case 'video': return Video;
+      case 'practice': return Target;
+      case 'certification': return Award;
+      case 'experience': return Clock;
+      case 'proficiency': return TrendingUp;
+      default: return Lightbulb;
     }
   };
 
@@ -433,323 +384,260 @@ const ReelSkillsDashboard: React.FC = () => {
     );
   }
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'technical': return Code;
-      case 'soft': return Users;
-      case 'language': return Globe;
-      case 'certification': return Certificate;
-      default: return Target;
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'verified': return Award;
-      case 'completed': return CheckCircle;
-      case 'in-progress': return Clock;
-      case 'planned': return Target;
-      default: return Target;
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'verified': return 'text-emerald-400';
-      case 'completed': return 'text-blue-400';
-      case 'in-progress': return 'text-amber-400';
-      case 'planned': return 'text-slate-400';
-      default: return 'text-slate-400';
-    }
-  };
-
-  const getProficiencyColor = (proficiency: string) => {
-    switch (proficiency) {
-      case 'master': return 'text-purple-400';
-      case 'expert': return 'text-red-400';
-      case 'advanced': return 'text-orange-400';
-      case 'intermediate': return 'text-yellow-400';
-      case 'beginner': return 'text-green-400';
-      default: return 'text-slate-400';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'critical': return 'border-red-500/30 bg-red-500/5';
-      case 'high': return 'border-orange-500/30 bg-orange-500/5';
-      case 'medium': return 'border-yellow-500/30 bg-yellow-500/5';
-      case 'low': return 'border-blue-500/30 bg-blue-500/5';
-      default: return 'border-slate-500/30 bg-slate-500/5';
-    }
-  };
-
   return (
     <div className="min-h-screen" style={{ 
       background: 'radial-gradient(ellipse at center, #1E293B 0%, #0F172A 100%)',
       backgroundAttachment: 'fixed'
     }}>
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="max-w-4xl mx-auto p-6">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-cyan-400 bg-clip-text text-transparent mb-2">
-                ReelSkills
-              </h1>
-              <p className="text-slate-400 text-lg">
-                Showcase your skills • Learn with AI guidance • Accelerate your career
-              </p>
-            </div>
-            <Button 
-              onClick={() => setIsModalOpen(true)}
-              className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 shadow-lg"
-            >
-              <Plus size={16} className="mr-2" />
-              Add Skill
-            </Button>
-          </div>
-
-          {/* Error Display */}
-          {error && (
-            <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-6">
-              <p className="text-red-300 text-sm">{error}</p>
-            </div>
-          )}
-
-          {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <Target size={20} className="text-blue-400" />
-                <TrendingUp size={16} className="text-green-400" />
-              </div>
-              <div className="text-2xl font-bold text-white">{skills.length}</div>
-              <div className="text-sm text-slate-400">Total Skills</div>
-            </div>
-
-            <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <Award size={20} className="text-emerald-400" />
-                <CheckCircle size={16} className="text-emerald-400" />
-              </div>
-              <div className="text-2xl font-bold text-emerald-300">
-                {skills.filter(s => s.verified).length}
-              </div>
-              <div className="text-sm text-slate-400">Verified</div>
-            </div>
-
-            <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <Clock size={20} className="text-amber-400" />
-                <Zap size={16} className="text-amber-400" />
-              </div>
-              <div className="text-2xl font-bold text-amber-300">
-                {skills.filter(s => s.years_experience > 0).length}
-              </div>
-              <div className="text-sm text-slate-400">With Experience</div>
-            </div>
-
-            <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <Brain size={20} className="text-purple-400" />
-                <Sparkles size={16} className="text-purple-400" />
-              </div>
-              <div className="text-2xl font-bold text-purple-300">{aiInsights.length}</div>
-              <div className="text-sm text-slate-400">AI Insights</div>
-            </div>
-          </div>
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-cyan-400 bg-clip-text text-transparent mb-2">
+            ReelSkills
+          </h1>
+          <p className="text-slate-400 text-lg">
+            Master one skill at a time with AI-powered guidance
+          </p>
         </div>
 
-        {/* AI Insights Section */}
-        {(aiInsights.length > 0 || loadingInsights) && (
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <Brain size={24} className="text-purple-400" />
-                <h2 className="text-xl font-bold text-white">AI Career Guidance</h2>
-                {insightsError && (
-                  <span className="text-xs text-amber-400 bg-amber-500/20 px-2 py-1 rounded">
-                    {insightsError}
-                  </span>
-                )}
-              </div>
-              <Button
-                size="small"
-                variant="outline"
-                onClick={fetchAIInsights}
-                disabled={loadingInsights}
-                className="border-slate-600/50 text-slate-300"
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-6">
+            <p className="text-red-300 text-sm">{error}</p>
+          </div>
+        )}
+
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+            <p className="text-white text-lg">Loading your skills...</p>
+          </div>
+        ) : skills.length === 0 ? (
+          /* No Skills State */
+          <div className="text-center py-16">
+            <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-12 max-w-md mx-auto">
+              <Target size={64} className="text-slate-400 mx-auto mb-6" />
+              <h3 className="text-2xl font-semibold text-white mb-4">Start Your Journey</h3>
+              <p className="text-slate-400 mb-8">
+                Add your first skill and let AI guide you to mastery with personalized improvement suggestions.
+              </p>
+              <Button 
+                onClick={() => setIsModalOpen(true)}
+                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-lg px-8 py-4"
               >
-                <RefreshCw size={14} className={`mr-1 ${loadingInsights ? 'animate-spin' : ''}`} />
-                Refresh
+                <Plus size={20} className="mr-2" />
+                Add Your First Skill
               </Button>
             </div>
-            
-            {loadingInsights ? (
-              <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6">
-                <div className="flex items-center gap-3">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-400"></div>
-                  <span className="text-slate-300">Generating AI insights...</span>
-                </div>
+          </div>
+        ) : (
+          /* Main Content */
+          <div className="space-y-8">
+            {/* Skill Selector */}
+            <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-white">Your Skills</h2>
+                <Button 
+                  size="small"
+                  onClick={() => setIsModalOpen(true)}
+                  className="bg-blue-600/80 hover:bg-blue-700/80"
+                >
+                  <Plus size={16} className="mr-1" />
+                  Add Skill
+                </Button>
               </div>
-            ) : (
-              <div className="grid gap-4">
-                {aiInsights.map((insight, index) => (
-                  <div 
-                    key={index}
-                    className={`bg-slate-800/20 backdrop-blur-sm border rounded-xl p-6 ${getPriorityColor(insight.priority)}`}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {skills.map((skill) => (
+                  <button
+                    key={skill.id}
+                    onClick={() => setCurrentSkill(skill)}
+                    className={`p-4 rounded-xl border transition-all text-left ${
+                      currentSkill?.id === skill.id
+                        ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
+                        : 'border-slate-600/30 bg-slate-700/20 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/30'
+                    }`}
                   >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <Lightbulb size={20} className="text-yellow-400" />
-                        <h3 className="font-semibold text-white">{insight.title}</h3>
+                    <div className="font-medium mb-1">{skill.name}</div>
+                    <div className="text-xs opacity-75 capitalize">{skill.proficiency}</div>
+                    {skill.video_verified && (
+                      <div className="flex items-center gap-1 mt-2">
+                        <CheckCircle size={12} className="text-green-400" />
+                        <span className="text-xs text-green-400">Verified</span>
                       </div>
-                      {insight.actionable && (
-                        <Button 
-                          size="small" 
-                          className="bg-blue-600/80 hover:bg-blue-700/80"
-                          onClick={() => handleInsightAction(insight)}
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Current Skill Focus */}
+            {currentSkill && (
+              <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-8">
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold text-white mb-2">{currentSkill.name}</h2>
+                  <div className="flex items-center justify-center gap-4 text-slate-400">
+                    <span className="capitalize">{currentSkill.category}</span>
+                    <span>•</span>
+                    <span className="capitalize">{currentSkill.proficiency}</span>
+                    <span>•</span>
+                    <span>{currentSkill.years_experience} years</span>
+                  </div>
+                  
+                  {/* AI Rating */}
+                  {currentSkill.ai_rating && (
+                    <div className="flex items-center justify-center gap-2 mt-4">
+                      <span className="text-slate-400">AI Rating:</span>
+                      <div className="flex items-center gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            size={16}
+                            className={i < currentSkill.ai_rating! ? 'text-yellow-400' : 'text-slate-600'}
+                            fill={i < currentSkill.ai_rating! ? 'currentColor' : 'none'}
+                          />
+                        ))}
+                        <span className="text-yellow-400 ml-1">{currentSkill.ai_rating}/5</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Main Action Button */}
+                <div className="text-center mb-8">
+                  {!currentSkill.video_demo_url ? (
+                    <Button
+                      onClick={() => setShowVideoUpload(true)}
+                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-xl px-12 py-6 rounded-2xl"
+                    >
+                      <Upload size={24} className="mr-3" />
+                      Upload Video Demo
+                    </Button>
+                  ) : !currentSkill.video_verified ? (
+                    <Button
+                      onClick={() => setShowVideoUpload(true)}
+                      className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-xl px-12 py-6 rounded-2xl"
+                    >
+                      <Brain size={24} className="mr-3" />
+                      Get AI Analysis
+                    </Button>
+                  ) : (
+                    <div className="bg-green-500/20 border border-green-500/30 rounded-2xl p-6">
+                      <div className="flex items-center justify-center gap-3 mb-3">
+                        <CheckCircle size={24} className="text-green-400" />
+                        <span className="text-xl font-bold text-green-300">Skill Verified!</span>
+                      </div>
+                      <p className="text-slate-300">
+                        Your {currentSkill.name} skills have been AI-verified. Great work!
+                      </p>
+                      {currentSkill.video_demo_url && (
+                        <Button
+                          onClick={() => window.open(currentSkill.video_demo_url, '_blank')}
+                          variant="outline"
+                          className="mt-4 border-green-500/30 text-green-300"
                         >
-                          <ArrowRight size={14} className="mr-1" />
-                          Act
+                          <Play size={16} className="mr-2" />
+                          View Demo
                         </Button>
                       )}
                     </div>
-                    <p className="text-slate-300 text-sm leading-relaxed">{insight.description}</p>
+                  )}
+                </div>
+
+                {/* AI Feedback */}
+                {currentSkill.ai_feedback && (
+                  <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-6 mb-8">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Brain size={20} className="text-purple-400" />
+                      <h3 className="font-semibold text-white">AI Feedback</h3>
+                    </div>
+                    <p className="text-slate-300">{currentSkill.ai_feedback}</p>
                   </div>
-                ))}
+                )}
+              </div>
+            )}
+
+            {/* AI Improvements */}
+            {currentSkill && (
+              <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <Lightbulb size={24} className="text-yellow-400" />
+                    <h3 className="text-xl font-bold text-white">AI Improvement Suggestions</h3>
+                  </div>
+                  <Button
+                    size="small"
+                    variant="outline"
+                    onClick={() => {
+                      setLoadingImprovements(true);
+                      setTimeout(() => {
+                        const skillImprovements = generateImprovements(currentSkill);
+                        setImprovements(skillImprovements);
+                        setLoadingImprovements(false);
+                      }, 1000);
+                    }}
+                    disabled={loadingImprovements}
+                    className="border-slate-600/50 text-slate-300"
+                  >
+                    <RefreshCw size={14} className={`mr-1 ${loadingImprovements ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                </div>
+
+                {loadingImprovements ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400 mr-3"></div>
+                    <span className="text-slate-300">Analyzing your skill...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {improvements.map((improvement, index) => {
+                      const Icon = getImprovementIcon(improvement.type);
+                      return (
+                        <div
+                          key={index}
+                          className={`border rounded-xl p-6 ${getPriorityColor(improvement.priority)}`}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <Icon size={20} />
+                              <h4 className="font-semibold">{improvement.title}</h4>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs px-2 py-1 rounded-full bg-current/20 capitalize">
+                                {improvement.priority}
+                              </span>
+                              {improvement.estimatedTime && (
+                                <span className="text-xs text-slate-400">
+                                  {improvement.estimatedTime}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <p className="text-slate-300 text-sm mb-4">{improvement.description}</p>
+                          {improvement.actionable && (
+                            <Button
+                              size="small"
+                              onClick={() => {
+                                if (improvement.type === 'video') {
+                                  setShowVideoUpload(true);
+                                }
+                                // Add other action handlers as needed
+                              }}
+                              className="bg-blue-600/80 hover:bg-blue-700/80"
+                            >
+                              <ArrowRight size={14} className="mr-1" />
+                              Take Action
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
         )}
-
-        {/* Skills Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <Target size={24} className="text-blue-400" />
-            <h2 className="text-xl font-bold text-white">Your Skills Portfolio</h2>
-          </div>
-
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6 animate-pulse">
-                  <div className="h-4 bg-slate-700/30 rounded mb-4"></div>
-                  <div className="h-3 bg-slate-700/30 rounded mb-2"></div>
-                  <div className="h-3 bg-slate-700/30 rounded w-2/3"></div>
-                </div>
-              ))}
-            </div>
-          ) : skills.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-8 max-w-md mx-auto">
-                <BookOpen size={48} className="text-slate-400 mx-auto mb-4" />
-                <h3 className="text-xl font-semibold text-white mb-2">Start Your Skills Journey</h3>
-                <p className="text-slate-400 mb-6">
-                  Add your first skill to begin showcasing your expertise and receiving AI-powered career guidance.
-                </p>
-                <Button 
-                  onClick={() => setIsModalOpen(true)}
-                  className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-                >
-                  <Plus size={16} className="mr-2" />
-                  Add Your First Skill
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {skills.map((skill) => {
-                const CategoryIcon = getCategoryIcon(skill.category);
-                const StatusIcon = getStatusIcon(skill.status);
-                
-                return (
-                  <div
-                    key={skill.id}
-                    className="group bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6 hover:border-blue-500/30 transition-all duration-300 cursor-pointer"
-                    onClick={() => handleSkillClick(skill)}
-                  >
-                    {/* Header */}
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-slate-700/30 rounded-lg">
-                          <CategoryIcon size={20} className="text-blue-400" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-white group-hover:text-blue-300 transition-colors">
-                            {skill.name}
-                          </h3>
-                          <p className="text-sm text-slate-400 capitalize">{skill.category}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <StatusIcon size={16} className={getStatusColor(skill.status)} />
-                        {skill.ai_rating && (
-                          <div className="flex items-center gap-1 ml-2">
-                            <Star size={12} className="text-yellow-400" />
-                            <span className="text-xs text-yellow-400">{skill.ai_rating}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Proficiency */}
-                    <div className="mb-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-slate-400">Proficiency</span>
-                        <span className={`text-sm font-medium capitalize ${getProficiencyColor(skill.proficiency)}`}>
-                          {skill.proficiency}
-                        </span>
-                      </div>
-                      <div className="w-full bg-slate-700/30 rounded-full h-2">
-                        <div 
-                          className="bg-gradient-to-r from-blue-500 to-cyan-400 h-2 rounded-full transition-all duration-500"
-                          style={{ 
-                            width: `${
-                              skill.proficiency === 'beginner' ? 20 :
-                              skill.proficiency === 'intermediate' ? 40 :
-                              skill.proficiency === 'advanced' ? 60 :
-                              skill.proficiency === 'expert' ? 80 : 100
-                            }%` 
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Experience & Status */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 text-sm">
-                        <span className="text-slate-400">
-                          {skill.years_experience} {skill.years_experience === 1 ? 'year' : 'years'}
-                        </span>
-                        {skill.endorsements > 0 && (
-                          <span className="text-green-400">
-                            {skill.endorsements} endorsements
-                          </span>
-                        )}
-                      </div>
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button 
-                          size="small" 
-                          variant="outline" 
-                          className="bg-slate-800/30 border-slate-600/30 text-slate-300"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSkillClick(skill);
-                          }}
-                        >
-                          <Eye size={12} className="mr-1" />
-                          View
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
 
         {/* Add Skill Modal */}
         <AddSkillModal
@@ -758,32 +646,16 @@ const ReelSkillsDashboard: React.FC = () => {
           onSave={handleSave}
         />
 
-        {/* Skill Detail Modal */}
-        <SkillDetailModal
-          skill={selectedSkill}
-          isOpen={!!selectedSkill}
-          onClose={() => setSelectedSkill(null)}
-          onUpdate={handleUpdateSkill}
-        />
-
-        {/* Learning Path Modal */}
-        <LearningPathModal
-          skill={learningPathModal.skill}
-          isOpen={learningPathModal.isOpen}
-          onClose={() => setLearningPathModal({ isOpen: false })}
-        />
-
-        {/* Skill Recommendation Modal */}
-        <SkillRecommendationModal
-          recommendations={skillRecommendationModal.recommendations || []}
-          isOpen={skillRecommendationModal.isOpen}
-          onClose={() => setSkillRecommendationModal({ isOpen: false })}
-          onAddSkill={(skillName) => {
-            // Auto-fill the add skill modal with the recommended skill
-            setSkillRecommendationModal({ isOpen: false });
-            setIsModalOpen(true);
-          }}
-        />
+        {/* Video Upload Modal */}
+        {currentSkill && (
+          <VideoUploadModal
+            isOpen={showVideoUpload}
+            onClose={() => setShowVideoUpload(false)}
+            skillId={currentSkill.id}
+            skillName={currentSkill.name}
+            onVideoAnalyzed={handleVideoAnalyzed}
+          />
+        )}
       </div>
     </div>
   );
