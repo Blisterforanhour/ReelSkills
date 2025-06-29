@@ -3,6 +3,7 @@ import { useAuthStore } from '../lib/auth';
 import { Button } from './ui/Button';
 import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
+import { SkillDetailModal } from './SkillDetailModal';
 import { Target, Plus, Brain, TrendingUp, BookOpen, Zap, ArrowRight, Lightbulb, CheckCircle, Clock, Star, Award, Code, Users, Globe, AlignCenterVertical as Certificate, Eye, Sparkles, AlertCircle } from 'lucide-react';
 
 interface Skill {
@@ -11,6 +12,15 @@ interface Skill {
   category: 'technical' | 'soft' | 'language' | 'certification';
   proficiency: 'beginner' | 'intermediate' | 'advanced' | 'expert' | 'master';
   status: 'planned' | 'in-progress' | 'completed' | 'verified';
+  years_experience: number;
+  verified: boolean;
+  endorsements: number;
+  video_demo_url?: string;
+  description?: string;
+  ai_rating?: number;
+  ai_feedback?: string;
+  video_verified: boolean;
+  video_uploaded_at?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -87,6 +97,15 @@ const ReelSkillsDashboard: React.FC = () => {
           category: row.category,
           proficiency: row.proficiency,
           status: row.verified ? 'verified' : 'planned',
+          years_experience: row.years_experience || 0,
+          verified: row.verified || false,
+          endorsements: row.endorsements || 0,
+          video_demo_url: row.video_demo_url,
+          description: row.description,
+          ai_rating: row.ai_rating,
+          ai_feedback: row.ai_feedback,
+          video_verified: row.video_verified || false,
+          video_uploaded_at: row.video_uploaded_at,
           created_at: row.created_at,
           updated_at: row.updated_at,
         }));
@@ -137,7 +156,7 @@ const ReelSkillsDashboard: React.FC = () => {
     }
   }, [skills]);
 
-  const handleSave = async ({ name, category, proficiency }: Omit<Skill, 'id' | 'status'>) => {
+  const handleSave = async ({ name, category, proficiency }: Omit<Skill, 'id' | 'status' | 'years_experience' | 'verified' | 'endorsements' | 'video_verified'>) => {
     if (!profile?.id) {
       setError('Profile not found. Please refresh the page.');
       return;
@@ -172,6 +191,15 @@ const ReelSkillsDashboard: React.FC = () => {
           category: data.category,
           proficiency: data.proficiency,
           status: 'planned',
+          years_experience: data.years_experience || 0,
+          verified: data.verified || false,
+          endorsements: data.endorsements || 0,
+          video_demo_url: data.video_demo_url,
+          description: data.description,
+          ai_rating: data.ai_rating,
+          ai_feedback: data.ai_feedback,
+          video_verified: data.video_verified || false,
+          video_uploaded_at: data.video_uploaded_at,
           created_at: data.created_at,
           updated_at: data.updated_at,
         };
@@ -180,6 +208,35 @@ const ReelSkillsDashboard: React.FC = () => {
     } catch (error) {
       console.error('Error saving skill:', error);
       setError('Failed to save skill');
+      throw error;
+    }
+  };
+
+  const handleUpdateSkill = async (skillId: string, updates: Partial<Skill>) => {
+    try {
+      const { data, error } = await supabase
+        .from('skills')
+        .update({
+          years_experience: updates.years_experience,
+          description: updates.description,
+          video_demo_url: updates.video_demo_url,
+        })
+        .eq('id', skillId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setSkills(prev => prev.map(skill => 
+          skill.id === skillId 
+            ? { ...skill, ...updates, updated_at: data.updated_at }
+            : skill
+        ));
+        setSelectedSkill(prev => prev ? { ...prev, ...updates } : null);
+      }
+    } catch (error) {
+      console.error('Error updating skill:', error);
       throw error;
     }
   };
@@ -339,7 +396,7 @@ const ReelSkillsDashboard: React.FC = () => {
                 <CheckCircle size={16} className="text-emerald-400" />
               </div>
               <div className="text-2xl font-bold text-emerald-300">
-                {skills.filter(s => s.status === 'verified').length}
+                {skills.filter(s => s.verified).length}
               </div>
               <div className="text-sm text-slate-400">Verified</div>
             </div>
@@ -350,9 +407,9 @@ const ReelSkillsDashboard: React.FC = () => {
                 <Zap size={16} className="text-amber-400" />
               </div>
               <div className="text-2xl font-bold text-amber-300">
-                {skills.filter(s => s.status === 'in-progress').length}
+                {skills.filter(s => s.years_experience > 0).length}
               </div>
-              <div className="text-sm text-slate-400">In Progress</div>
+              <div className="text-sm text-slate-400">With Experience</div>
             </div>
 
             <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-4">
@@ -459,6 +516,12 @@ const ReelSkillsDashboard: React.FC = () => {
                       </div>
                       <div className="flex items-center gap-1">
                         <StatusIcon size={16} className={getStatusColor(skill.status)} />
+                        {skill.ai_rating && (
+                          <div className="flex items-center gap-1 ml-2">
+                            <Star size={12} className="text-yellow-400" />
+                            <span className="text-xs text-yellow-400">{skill.ai_rating}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -485,11 +548,18 @@ const ReelSkillsDashboard: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Status */}
+                    {/* Experience & Status */}
                     <div className="flex items-center justify-between">
-                      <span className={`text-sm capitalize ${getStatusColor(skill.status)}`}>
-                        {skill.status.replace('-', ' ')}
-                      </span>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="text-slate-400">
+                          {skill.years_experience} {skill.years_experience === 1 ? 'year' : 'years'}
+                        </span>
+                        {skill.endorsements > 0 && (
+                          <span className="text-green-400">
+                            {skill.endorsements} endorsements
+                          </span>
+                        )}
+                      </div>
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button size="small" variant="outline" className="bg-slate-800/30 border-slate-600/30 text-slate-300">
                           <Eye size={12} className="mr-1" />
@@ -509,6 +579,14 @@ const ReelSkillsDashboard: React.FC = () => {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           onSave={handleSave}
+        />
+
+        {/* Skill Detail Modal */}
+        <SkillDetailModal
+          skill={selectedSkill}
+          isOpen={!!selectedSkill}
+          onClose={() => setSelectedSkill(null)}
+          onUpdate={handleUpdateSkill}
         />
       </div>
     </div>
