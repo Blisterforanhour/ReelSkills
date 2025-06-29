@@ -10,7 +10,7 @@ interface AddSkillModalProps {
     name: string;
     category: 'technical' | 'soft' | 'language' | 'certification';
     proficiency: 'beginner' | 'intermediate' | 'advanced' | 'expert' | 'master';
-  }) => void;
+  }) => Promise<void>;
 }
 
 const categories = [
@@ -33,29 +33,40 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
   const [category, setCategory] = useState<'technical' | 'soft' | 'language' | 'certification'>('technical');
   const [proficiency, setProficiency] = useState<typeof proficiencies[number]['value']>('beginner');
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setError('Skill name is required');
+      return;
+    }
     
     setIsSaving(true);
+    setError(null);
+    
     try {
       await onSave({ name: name.trim(), category, proficiency });
+      // Reset form
       setName('');
       setCategory('technical');
       setProficiency('beginner');
       onClose();
     } catch (error) {
       console.error('Error saving skill:', error);
+      setError('Failed to save skill. Please try again.');
     } finally {
       setIsSaving(false);
     }
   };
 
   const handleClose = () => {
-    setName('');
-    setCategory('technical');
-    setProficiency('beginner');
-    onClose();
+    if (!isSaving) {
+      setName('');
+      setCategory('technical');
+      setProficiency('beginner');
+      setError(null);
+      onClose();
+    }
   };
 
   return (
@@ -65,13 +76,14 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
       
       {/* Dialog Panel */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <Dialog.Panel className="w-full max-w-lg bg-gradient-to-br from-slate-800/95 to-slate-900/95 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-2xl">
+        <Dialog.Panel className="w-full max-w-lg bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-slate-700/50">
             <Dialog.Title className="text-xl font-bold text-white">Add New Skill</Dialog.Title>
             <button
               onClick={handleClose}
-              className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
+              disabled={isSaving}
+              className="p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors disabled:opacity-50"
             >
               <X size={20} />
             </button>
@@ -79,6 +91,13 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
 
           {/* Content */}
           <div className="p-6 space-y-6">
+            {/* Error Display */}
+            {error && (
+              <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3">
+                <p className="text-red-300 text-sm">{error}</p>
+              </div>
+            )}
+
             {/* Skill Name */}
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-2">Skill Name</label>
@@ -89,6 +108,7 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g., React, Python, Leadership, Spanish"
                 autoFocus
+                disabled={isSaving}
               />
             </div>
 
@@ -103,7 +123,8 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
                       key={cat.value}
                       type="button"
                       onClick={() => setCategory(cat.value)}
-                      className={`p-4 rounded-xl border transition-all text-left ${
+                      disabled={isSaving}
+                      className={`p-4 rounded-xl border transition-all text-left disabled:opacity-50 ${
                         category === cat.value
                           ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
                           : 'border-slate-600/50 bg-slate-700/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/50'
@@ -129,7 +150,8 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
                     key={prof.value}
                     type="button"
                     onClick={() => setProficiency(prof.value)}
-                    className={`w-full p-3 rounded-lg border transition-all text-left ${
+                    disabled={isSaving}
+                    className={`w-full p-3 rounded-lg border transition-all text-left disabled:opacity-50 ${
                       proficiency === prof.value
                         ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
                         : 'border-slate-600/50 bg-slate-700/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/50'

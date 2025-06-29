@@ -3,7 +3,7 @@ import { useAuthStore } from '../lib/auth';
 import { Button } from './ui/Button';
 import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
-import { Target, Plus, Brain, TrendingUp, BookOpen, Zap, ArrowRight, Lightbulb, CheckCircle, Clock, Star, Award, Code, Users, Globe, AlignCenterVertical as Certificate, PlayCircle, Eye, Sparkles } from 'lucide-react';
+import { Target, Plus, Brain, TrendingUp, BookOpen, Zap, ArrowRight, Lightbulb, CheckCircle, Clock, Star, Award, Code, Users, Globe, AlignCenterVertical as Certificate, Eye, Sparkles } from 'lucide-react';
 
 interface Skill {
   id: string;
@@ -30,39 +30,54 @@ const ReelSkillsDashboard: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const supabase = getSupabaseClient();
 
-  useEffect(() => {
-    const fetchSkills = async () => {
-      if (!profile?.id) return;
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('skills')
-          .select('*')
-          .eq('profile_id', profile.id)
-          .order('created_at', { ascending: false });
-
-        if (!error && data) {
-          setSkills(data.map((row: any) => ({
-            id: row.id,
-            name: row.name,
-            category: row.category,
-            proficiency: row.proficiency,
-            status: row.verified ? 'verified' : 'planned',
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-          })));
-        }
-      } catch (error) {
-        console.error('Error fetching skills:', error);
-      }
+  const fetchSkills = async () => {
+    if (!profile?.id) {
       setLoading(false);
-    };
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const { data, error } = await supabase
+        .from('skills')
+        .select('*')
+        .eq('profile_id', profile.id)
+        .order('created_at', { ascending: false });
 
+      if (error) {
+        console.error('Error fetching skills:', error);
+        setError('Failed to load skills');
+        setSkills([]);
+      } else {
+        const formattedSkills = (data || []).map((row: any) => ({
+          id: row.id,
+          name: row.name,
+          category: row.category,
+          proficiency: row.proficiency,
+          status: row.verified ? 'verified' : 'planned',
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+        }));
+        setSkills(formattedSkills);
+      }
+    } catch (error) {
+      console.error('Error fetching skills:', error);
+      setError('Failed to load skills');
+      setSkills([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchSkills();
-  }, [supabase, profile?.id]);
+  }, [profile?.id]);
 
   // Generate AI insights based on current skills
   useEffect(() => {
@@ -91,26 +106,40 @@ const ReelSkillsDashboard: React.FC = () => {
         }
       ];
       setAiInsights(insights);
+    } else {
+      setAiInsights([]);
     }
   }, [skills]);
 
   const handleSave = async ({ name, category, proficiency }: Omit<Skill, 'id' | 'status'>) => {
-    if (!profile?.id) return;
+    if (!profile?.id) {
+      setError('Profile not found');
+      return;
+    }
+
     try {
+      setError(null);
       const { data, error } = await supabase
         .from('skills')
         .insert({
           profile_id: profile.id,
-          name,
+          name: name.trim(),
           category,
           proficiency,
           years_experience: 0,
           description: null,
+          verified: false,
         })
         .select()
         .single();
 
-      if (!error && data) {
+      if (error) {
+        console.error('Error saving skill:', error);
+        setError('Failed to save skill');
+        throw error;
+      }
+
+      if (data) {
         const newSkill: Skill = {
           id: data.id,
           name: data.name,
@@ -124,6 +153,8 @@ const ReelSkillsDashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('Error saving skill:', error);
+      setError('Failed to save skill');
+      throw error;
     }
   };
 
@@ -170,11 +201,11 @@ const ReelSkillsDashboard: React.FC = () => {
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'critical': return 'border-red-500/50 bg-red-500/10';
-      case 'high': return 'border-orange-500/50 bg-orange-500/10';
-      case 'medium': return 'border-yellow-500/50 bg-yellow-500/10';
-      case 'low': return 'border-blue-500/50 bg-blue-500/10';
-      default: return 'border-slate-500/50 bg-slate-500/10';
+      case 'critical': return 'border-red-500/30 bg-red-500/5';
+      case 'high': return 'border-orange-500/30 bg-orange-500/5';
+      case 'medium': return 'border-yellow-500/30 bg-yellow-500/5';
+      case 'low': return 'border-blue-500/30 bg-blue-500/5';
+      default: return 'border-slate-500/30 bg-slate-500/5';
     }
   };
 
@@ -204,9 +235,16 @@ const ReelSkillsDashboard: React.FC = () => {
             </Button>
           </div>
 
+          {/* Error Display */}
+          {error && (
+            <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-6">
+              <p className="text-red-300 text-sm">{error}</p>
+            </div>
+          )}
+
           {/* Quick Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-gradient-to-br from-slate-800/30 to-slate-900/30 backdrop-blur-sm border border-slate-700/30 rounded-xl p-4">
+            <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <Target size={20} className="text-blue-400" />
                 <TrendingUp size={16} className="text-green-400" />
@@ -215,7 +253,7 @@ const ReelSkillsDashboard: React.FC = () => {
               <div className="text-sm text-slate-400">Total Skills</div>
             </div>
 
-            <div className="bg-gradient-to-br from-slate-800/30 to-slate-900/30 backdrop-blur-sm border border-slate-700/30 rounded-xl p-4">
+            <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <Award size={20} className="text-emerald-400" />
                 <CheckCircle size={16} className="text-emerald-400" />
@@ -226,7 +264,7 @@ const ReelSkillsDashboard: React.FC = () => {
               <div className="text-sm text-slate-400">Verified</div>
             </div>
 
-            <div className="bg-gradient-to-br from-slate-800/30 to-slate-900/30 backdrop-blur-sm border border-slate-700/30 rounded-xl p-4">
+            <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <Clock size={20} className="text-amber-400" />
                 <Zap size={16} className="text-amber-400" />
@@ -237,7 +275,7 @@ const ReelSkillsDashboard: React.FC = () => {
               <div className="text-sm text-slate-400">In Progress</div>
             </div>
 
-            <div className="bg-gradient-to-br from-slate-800/30 to-slate-900/30 backdrop-blur-sm border border-slate-700/30 rounded-xl p-4">
+            <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <Brain size={20} className="text-purple-400" />
                 <Sparkles size={16} className="text-purple-400" />
@@ -259,7 +297,7 @@ const ReelSkillsDashboard: React.FC = () => {
               {aiInsights.map((insight, index) => (
                 <div 
                   key={index}
-                  className={`bg-gradient-to-br from-slate-800/30 to-slate-900/30 backdrop-blur-sm border rounded-xl p-6 ${getPriorityColor(insight.priority)}`}
+                  className={`bg-slate-800/20 backdrop-blur-sm border rounded-xl p-6 ${getPriorityColor(insight.priority)}`}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
@@ -290,16 +328,16 @@ const ReelSkillsDashboard: React.FC = () => {
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-gradient-to-br from-slate-800/30 to-slate-900/30 backdrop-blur-sm border border-slate-700/30 rounded-xl p-6 animate-pulse">
-                  <div className="h-4 bg-slate-700/50 rounded mb-4"></div>
-                  <div className="h-3 bg-slate-700/50 rounded mb-2"></div>
-                  <div className="h-3 bg-slate-700/50 rounded w-2/3"></div>
+                <div key={i} className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6 animate-pulse">
+                  <div className="h-4 bg-slate-700/30 rounded mb-4"></div>
+                  <div className="h-3 bg-slate-700/30 rounded mb-2"></div>
+                  <div className="h-3 bg-slate-700/30 rounded w-2/3"></div>
                 </div>
               ))}
             </div>
           ) : skills.length === 0 ? (
             <div className="text-center py-12">
-              <div className="bg-gradient-to-br from-slate-800/30 to-slate-900/30 backdrop-blur-sm border border-slate-700/30 rounded-xl p-8 max-w-md mx-auto">
+              <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-8 max-w-md mx-auto">
                 <BookOpen size={48} className="text-slate-400 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-white mb-2">Start Your Skills Journey</h3>
                 <p className="text-slate-400 mb-6">
@@ -323,13 +361,13 @@ const ReelSkillsDashboard: React.FC = () => {
                 return (
                   <div
                     key={skill.id}
-                    className="group bg-gradient-to-br from-slate-800/30 to-slate-900/30 backdrop-blur-sm border border-slate-700/30 rounded-xl p-6 hover:border-blue-500/50 transition-all duration-300 cursor-pointer"
+                    className="group bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6 hover:border-blue-500/30 transition-all duration-300 cursor-pointer"
                     onClick={() => setSelectedSkill(skill)}
                   >
                     {/* Header */}
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="p-2 bg-slate-700/50 rounded-lg">
+                        <div className="p-2 bg-slate-700/30 rounded-lg">
                           <CategoryIcon size={20} className="text-blue-400" />
                         </div>
                         <div>
@@ -352,7 +390,7 @@ const ReelSkillsDashboard: React.FC = () => {
                           {skill.proficiency}
                         </span>
                       </div>
-                      <div className="w-full bg-slate-700/50 rounded-full h-2">
+                      <div className="w-full bg-slate-700/30 rounded-full h-2">
                         <div 
                           className="bg-gradient-to-r from-blue-500 to-cyan-400 h-2 rounded-full transition-all duration-500"
                           style={{ 
@@ -373,7 +411,7 @@ const ReelSkillsDashboard: React.FC = () => {
                         {skill.status.replace('-', ' ')}
                       </span>
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="small" variant="outline" className="bg-slate-800/50 border-slate-600/50 text-slate-300">
+                        <Button size="small" variant="outline" className="bg-slate-800/30 border-slate-600/30 text-slate-300">
                           <Eye size={12} className="mr-1" />
                           View
                         </Button>
