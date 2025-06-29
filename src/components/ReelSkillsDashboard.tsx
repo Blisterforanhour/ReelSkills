@@ -5,7 +5,7 @@ import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
 import { VideoUploadModal } from './VideoUploadModal';
 import { SkillDetailModal } from './SkillDetailModal';
-import { Target, Plus, Brain, Star, Award, Video, ArrowRight, Lightbulb, AlertCircle, RefreshCw, Play, Upload, CheckCircle, Clock, TrendingUp, Edit, BookOpen, Certificate } from 'lucide-react';
+import { Target, Plus, Brain, Star, Award, Video, ArrowRight, Lightbulb, AlertCircle, RefreshCw, Play, Upload, CheckCircle, Clock, TrendingUp, Edit, BookOpen, AlignCenterVertical as Certificate } from 'lucide-react';
 
 interface Skill {
   id: string;
