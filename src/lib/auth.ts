@@ -63,20 +63,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (session?.user) {
         // Fetch profile
-        const { data: profile, error: profileError } = await supabase
+        const { data: profiles, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
-          .single();
+          .limit(1);
 
-        if (profileError && profileError.code !== 'PGRST116') {
+        if (profileError) {
           console.error('Profile fetch error:', profileError);
         }
+
+        const profile = profiles && profiles.length > 0 ? profiles[0] : null;
 
         set({
           user: session.user,
           session,
-          profile: profile || null,
+          profile,
           isAuthenticated: true,
           isInitializing: false,
         });
@@ -93,16 +95,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Listen for auth changes
       supabase.auth.onAuthStateChange(async (event, session) => {
         if (session?.user) {
-          const { data: profile } = await supabase
+          const { data: profiles } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
-            .single();
+            .limit(1);
+
+          const profile = profiles && profiles.length > 0 ? profiles[0] : null;
 
           set({
             user: session.user,
             session,
-            profile: profile || null,
+            profile,
             isAuthenticated: true,
           });
         } else {
