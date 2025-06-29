@@ -6,7 +6,7 @@ import { AddSkillModal } from './AddSkillModal';
 import { SkillDetailModal } from './SkillDetailModal';
 import { LearningPathModal } from './LearningPathModal';
 import { SkillRecommendationModal } from './SkillRecommendationModal';
-import { Target, Plus, Brain, TrendingUp, BookOpen, Zap, ArrowRight, Lightbulb, CheckCircle, Clock, Star, Award, Code, Users, Globe, AlignCenterVertical as Certificate, Eye, Sparkles, AlertCircle } from 'lucide-react';
+import { Target, Plus, Brain, TrendingUp, BookOpen, Zap, ArrowRight, Lightbulb, CheckCircle, Clock, Star, Award, Code, Users, Globe, AlignCenterVertical as Certificate, Eye, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
 
 interface Skill {
   id: string;
@@ -45,6 +45,7 @@ const ReelSkillsDashboard: React.FC = () => {
   const [aiInsights, setAiInsights] = useState<AIInsight[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [creatingProfile, setCreatingProfile] = useState(false);
+  const [loadingInsights, setLoadingInsights] = useState(false);
   
   // New modal states
   const [learningPathModal, setLearningPathModal] = useState<{ isOpen: boolean; skill?: Skill }>({ isOpen: false });
@@ -127,70 +128,106 @@ const ReelSkillsDashboard: React.FC = () => {
     }
   };
 
+  const fetchAIInsights = async () => {
+    if (!profile?.id) return;
+    
+    setLoadingInsights(true);
+    
+    try {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-skill-insights`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          profileId: profile.id
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setAiInsights(result.insights || []);
+      } else {
+        // Fallback to local insights generation
+        generateLocalInsights();
+      }
+    } catch (error) {
+      console.error('Error fetching AI insights:', error);
+      // Fallback to local insights generation
+      generateLocalInsights();
+    } finally {
+      setLoadingInsights(false);
+    }
+  };
+
+  const generateLocalInsights = () => {
+    const insights: AIInsight[] = [];
+    
+    // Find skills that can be advanced
+    const skillsToAdvance = skills.filter(skill => 
+      skill.proficiency !== 'master' && skill.years_experience > 0
+    );
+    
+    if (skillsToAdvance.length > 0) {
+      insights.push({
+        type: 'learning-path',
+        title: 'Complete Your Learning Path',
+        description: `Focus on advancing your ${skillsToAdvance[0].name} skills to the next proficiency level.`,
+        actionable: true,
+        priority: 'high',
+        data: { skill: skillsToAdvance[0] }
+      });
+    }
+
+    // Market trend insight
+    insights.push({
+      type: 'market-trend',
+      title: 'High-Demand Skills Alert',
+      description: 'AI and Machine Learning skills are seeing 40% growth in job postings this quarter.',
+      actionable: true,
+      priority: 'critical',
+      data: { 
+        trendingSkills: ['Artificial Intelligence', 'Machine Learning', 'Python', 'Data Science'],
+        growthRate: 40
+      }
+    });
+
+    // Skill gap analysis
+    const hasCloudSkills = skills.some(skill => 
+      skill.name.toLowerCase().includes('cloud') || 
+      skill.name.toLowerCase().includes('aws') || 
+      skill.name.toLowerCase().includes('azure')
+    );
+    
+    if (!hasCloudSkills && skills.some(skill => skill.category === 'technical')) {
+      insights.push({
+        type: 'skill-gap',
+        title: 'Skill Gap Analysis',
+        description: 'Consider adding cloud computing skills to complement your technical stack.',
+        actionable: true,
+        priority: 'medium',
+        data: { 
+          recommendedSkills: ['AWS', 'Azure', 'Google Cloud', 'Docker', 'Kubernetes'],
+          reason: 'Cloud skills complement your existing technical expertise'
+        }
+      });
+    }
+
+    setAiInsights(insights);
+  };
+
   useEffect(() => {
     fetchSkills();
   }, [profile?.id]);
 
-  // Generate AI insights based on current skills
   useEffect(() => {
     if (skills.length > 0) {
-      const insights: AIInsight[] = [];
-      
-      // Find skills that can be advanced
-      const skillsToAdvance = skills.filter(skill => 
-        skill.proficiency !== 'master' && skill.years_experience > 0
-      );
-      
-      if (skillsToAdvance.length > 0) {
-        insights.push({
-          type: 'learning-path',
-          title: 'Complete Your Learning Path',
-          description: `Focus on advancing your ${skillsToAdvance[0].name} skills to the next proficiency level.`,
-          actionable: true,
-          priority: 'high',
-          data: { skill: skillsToAdvance[0] }
-        });
-      }
-
-      // Market trend insight
-      insights.push({
-        type: 'market-trend',
-        title: 'High-Demand Skills Alert',
-        description: 'AI and Machine Learning skills are seeing 40% growth in job postings this quarter.',
-        actionable: true,
-        priority: 'critical',
-        data: { 
-          trendingSkills: ['Artificial Intelligence', 'Machine Learning', 'Python', 'Data Science'],
-          growthRate: 40
-        }
-      });
-
-      // Skill gap analysis
-      const hasCloudSkills = skills.some(skill => 
-        skill.name.toLowerCase().includes('cloud') || 
-        skill.name.toLowerCase().includes('aws') || 
-        skill.name.toLowerCase().includes('azure')
-      );
-      
-      if (!hasCloudSkills && skills.some(skill => skill.category === 'technical')) {
-        insights.push({
-          type: 'skill-gap',
-          title: 'Skill Gap Analysis',
-          description: 'Consider adding cloud computing skills to complement your technical stack.',
-          actionable: true,
-          priority: 'medium',
-          data: { 
-            recommendedSkills: ['AWS', 'Azure', 'Google Cloud', 'Docker', 'Kubernetes'],
-            reason: 'Cloud skills complement your existing technical expertise'
-          }
-        });
-      }
-
-      setAiInsights(insights);
+      fetchAIInsights();
     } else {
       setAiInsights([]);
     }
-  }, [skills]);
+  }, [skills, profile?.id]);
 
   const handleSave = async ({ name, category, proficiency }: Omit<Skill, 'id' | 'status' | 'years_experience' | 'verified' | 'endorsements' | 'video_verified'>) => {
     if (!profile?.id) {
@@ -256,6 +293,9 @@ const ReelSkillsDashboard: React.FC = () => {
           years_experience: updates.years_experience,
           description: updates.description,
           video_demo_url: updates.video_demo_url,
+          ai_rating: updates.ai_rating,
+          ai_feedback: updates.ai_feedback,
+          video_verified: updates.video_verified,
         })
         .eq('id', skillId)
         .select()
@@ -503,38 +543,60 @@ const ReelSkillsDashboard: React.FC = () => {
         </div>
 
         {/* AI Insights Section */}
-        {aiInsights.length > 0 && (
+        {(aiInsights.length > 0 || loadingInsights) && (
           <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <Brain size={24} className="text-purple-400" />
-              <h2 className="text-xl font-bold text-white">AI Career Guidance</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Brain size={24} className="text-purple-400" />
+                <h2 className="text-xl font-bold text-white">AI Career Guidance</h2>
+              </div>
+              <Button
+                size="small"
+                variant="outline"
+                onClick={fetchAIInsights}
+                disabled={loadingInsights}
+                className="border-slate-600/50 text-slate-300"
+              >
+                <RefreshCw size={14} className={`mr-1 ${loadingInsights ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
             </div>
-            <div className="grid gap-4">
-              {aiInsights.map((insight, index) => (
-                <div 
-                  key={index}
-                  className={`bg-slate-800/20 backdrop-blur-sm border rounded-xl p-6 ${getPriorityColor(insight.priority)}`}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <Lightbulb size={20} className="text-yellow-400" />
-                      <h3 className="font-semibold text-white">{insight.title}</h3>
-                    </div>
-                    {insight.actionable && (
-                      <Button 
-                        size="small" 
-                        className="bg-blue-600/80 hover:bg-blue-700/80"
-                        onClick={() => handleInsightAction(insight)}
-                      >
-                        <ArrowRight size={14} className="mr-1" />
-                        Act
-                      </Button>
-                    )}
-                  </div>
-                  <p className="text-slate-300 text-sm leading-relaxed">{insight.description}</p>
+            
+            {loadingInsights ? (
+              <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6">
+                <div className="flex items-center gap-3">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-purple-400"></div>
+                  <span className="text-slate-300">Generating AI insights...</span>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {aiInsights.map((insight, index) => (
+                  <div 
+                    key={index}
+                    className={`bg-slate-800/20 backdrop-blur-sm border rounded-xl p-6 ${getPriorityColor(insight.priority)}`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <Lightbulb size={20} className="text-yellow-400" />
+                        <h3 className="font-semibold text-white">{insight.title}</h3>
+                      </div>
+                      {insight.actionable && (
+                        <Button 
+                          size="small" 
+                          className="bg-blue-600/80 hover:bg-blue-700/80"
+                          onClick={() => handleInsightAction(insight)}
+                        >
+                          <ArrowRight size={14} className="mr-1" />
+                          Act
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-slate-300 text-sm leading-relaxed">{insight.description}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
