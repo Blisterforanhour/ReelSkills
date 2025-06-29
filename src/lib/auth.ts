@@ -60,7 +60,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { data, error } = await supabase
         .from('profiles')
         .insert({
-          id: userId,
+          user_id: userId,
           email: email,
           first_name: firstName || null,
           last_name: lastName || null,
@@ -95,7 +95,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const { data: profiles, error: profileError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', session.user.id)
+          .eq('user_id', session.user.id)
           .limit(1);
 
         let profile = profiles && profiles.length > 0 ? profiles[0] : null;
@@ -138,7 +138,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const { data: profiles } = await supabase
             .from('profiles')
             .select('*')
-            .eq('id', session.user.id)
+            .eq('user_id', session.user.id)
             .limit(1);
 
           let profile = profiles && profiles.length > 0 ? profiles[0] : null;
