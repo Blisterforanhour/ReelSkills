@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
 import { Button } from './ui/Button';
 import { VideoUploadModal } from './VideoUploadModal';
-import { X, Star, Award, Clock, TrendingUp, Video, FileText, Users, Calendar, Upload, Play } from 'lucide-react';
+import { X, Star, Award, Clock, TrendingUp, Video, FileText, Users, Calendar, Upload, Play, Edit, Trash2, AlertTriangle } from 'lucide-react';
 
 interface Skill {
   id: string;
@@ -27,19 +27,23 @@ interface SkillDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (skillId: string, updates: Partial<Skill>) => Promise<void>;
+  onDelete?: (skillId: string) => Promise<void>;
 }
 
 export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
   skill,
   isOpen,
   onClose,
-  onUpdate
+  onUpdate,
+  onDelete
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [yearsExperience, setYearsExperience] = useState(0);
   const [description, setDescription] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showVideoUpload, setShowVideoUpload] = useState(false);
 
   // Update local state when skill changes
@@ -78,6 +82,22 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
     setIsEditing(false);
   };
 
+  const handleDelete = async () => {
+    if (!onDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      await onDelete(skill.id);
+      setShowDeleteConfirm(false);
+      onClose();
+    } catch (error) {
+      console.error('Error deleting skill:', error);
+      alert('Failed to delete skill. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleVideoAnalyzed = async (result: { rating: number; feedback: string; verified: boolean }) => {
     // Update the skill with AI analysis results
     await onUpdate(skill.id, {
@@ -106,6 +126,62 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
     return 'text-red-400';
   };
 
+  // Delete Confirmation Modal
+  const DeleteConfirmModal = () => (
+    <Dialog open={showDeleteConfirm} onClose={() => !isDeleting && setShowDeleteConfirm(false)}>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]" aria-hidden="true" />
+      
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <Dialog.Panel className="w-full max-w-md bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-2xl">
+          <div className="p-6">
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center">
+                <AlertTriangle size={24} className="text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Delete Skill</h3>
+                <p className="text-slate-400 text-sm">This action cannot be undone</p>
+              </div>
+            </div>
+            
+            <p className="text-slate-300 mb-6">
+              Are you sure you want to delete <strong className="text-white">"{skill.name}"</strong>? 
+              This will permanently remove the skill, including any ReelSkill videos and AI analysis data.
+            </p>
+            
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="flex-1 border-slate-600/50 text-slate-300"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={16} className="mr-2" />
+                    Delete Skill
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </Dialog.Panel>
+      </div>
+    </Dialog>
+  );
+
   return (
     <>
       <Dialog open={isOpen} onClose={onClose}>
@@ -119,16 +195,33 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
                 <Dialog.Title className="text-2xl font-bold text-white">{skill.name}</Dialog.Title>
                 <p className="text-slate-400 capitalize">{skill.category} skill</p>
               </div>
-              <div className="flex items-center gap-3">
-                <Button
-                  variant="outline"
-                  size="small"
-                  onClick={() => isEditing ? handleCancel() : setIsEditing(true)}
-                  className="border-slate-600/50 text-slate-300"
-                  disabled={isSaving}
-                >
-                  {isEditing ? 'Cancel' : 'Edit'}
-                </Button>
+              <div className="flex items-center gap-2">
+                {!isEditing && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="small"
+                      onClick={() => setIsEditing(true)}
+                      className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
+                      disabled={isSaving}
+                    >
+                      <Edit size={14} className="mr-1" />
+                      Edit
+                    </Button>
+                    {onDelete && (
+                      <Button
+                        variant="outline"
+                        size="small"
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="border-red-500/30 text-red-300 hover:bg-red-500/10"
+                        disabled={isSaving}
+                      >
+                        <Trash2 size={14} className="mr-1" />
+                        Delete
+                      </Button>
+                    )}
+                  </>
+                )}
                 <button
                   onClick={onClose}
                   disabled={isSaving}
@@ -381,6 +474,9 @@ export const SkillDetailModal: React.FC<SkillDetailModalProps> = ({
           </Dialog.Panel>
         </div>
       </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal />
 
       {/* Video Upload Modal */}
       <VideoUploadModal

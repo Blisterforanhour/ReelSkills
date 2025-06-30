@@ -5,7 +5,7 @@ import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
 import { VideoUploadModal } from './VideoUploadModal';
 import { SkillDetailModal } from './SkillDetailModal';
-import { Target, Plus, Brain, Star, Award, Video, CheckCircle, Upload, Play, Edit, AlertCircle, Sparkles } from 'lucide-react';
+import { Target, Plus, Brain, Star, Award, Video, CheckCircle, Upload, Play, Edit, AlertCircle, Sparkles, Trash2, MoreVertical } from 'lucide-react';
 
 interface Skill {
   id: string;
@@ -143,6 +143,29 @@ const ReelSkillsDashboard: React.FC = () => {
       }
     } catch (error) {
       console.error('Error updating skill:', error);
+      throw error;
+    }
+  };
+
+  const handleDeleteSkill = async (skillId: string) => {
+    try {
+      const { error } = await supabase
+        .from('skills')
+        .delete()
+        .eq('id', skillId);
+
+      if (error) throw error;
+
+      // Remove from local state
+      setSkills(prev => prev.filter(skill => skill.id !== skillId));
+      
+      // If this was the current skill, select another one or clear
+      if (currentSkill?.id === skillId) {
+        const remainingSkills = skills.filter(skill => skill.id !== skillId);
+        setCurrentSkill(remainingSkills.length > 0 ? remainingSkills[0] : null);
+      }
+    } catch (error) {
+      console.error('Error deleting skill:', error);
       throw error;
     }
   };
@@ -372,32 +395,65 @@ const ReelSkillsDashboard: React.FC = () => {
                   Add Skill
                 </Button>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                 {skills.map((skill) => (
-                  <button
+                  <div
                     key={skill.id}
-                    onClick={() => setCurrentSkill(skill)}
-                    className={`p-4 rounded-xl border transition-all text-left ${
+                    className={`relative group p-4 rounded-xl border transition-all ${
                       currentSkill?.id === skill.id
                         ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
                         : 'border-slate-600/30 bg-slate-800/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/40'
                     }`}
                   >
-                    <div className="font-medium mb-1">{skill.name}</div>
-                    <div className="text-xs opacity-75 capitalize">{skill.proficiency}</div>
-                    {skill.video_verified && (
-                      <div className="flex items-center gap-1 mt-2">
-                        <CheckCircle size={12} className="text-green-400" />
-                        <span className="text-xs text-green-400">AI Verified</span>
+                    <button
+                      onClick={() => setCurrentSkill(skill)}
+                      className="w-full text-left"
+                    >
+                      <div className="font-medium mb-1">{skill.name}</div>
+                      <div className="text-xs opacity-75 capitalize">{skill.proficiency}</div>
+                      {skill.video_verified && (
+                        <div className="flex items-center gap-1 mt-2">
+                          <CheckCircle size={12} className="text-green-400" />
+                          <span className="text-xs text-green-400">AI Verified</span>
+                        </div>
+                      )}
+                      {skill.video_demo_url && !skill.video_verified && (
+                        <div className="flex items-center gap-1 mt-2">
+                          <Video size={12} className="text-blue-400" />
+                          <span className="text-xs text-blue-400">ReelSkill Uploaded</span>
+                        </div>
+                      )}
+                    </button>
+                    
+                    {/* Quick Actions Menu */}
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCurrentSkill(skill);
+                            setShowSkillDetail(true);
+                          }}
+                          className="p-1.5 bg-slate-700/80 hover:bg-blue-600/80 rounded-lg transition-colors"
+                          title="Edit skill"
+                        >
+                          <Edit size={12} className="text-white" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (confirm(`Are you sure you want to delete "${skill.name}"?`)) {
+                              handleDeleteSkill(skill.id);
+                            }
+                          }}
+                          className="p-1.5 bg-slate-700/80 hover:bg-red-600/80 rounded-lg transition-colors"
+                          title="Delete skill"
+                        >
+                          <Trash2 size={12} className="text-white" />
+                        </button>
                       </div>
-                    )}
-                    {skill.video_demo_url && !skill.video_verified && (
-                      <div className="flex items-center gap-1 mt-2">
-                        <Video size={12} className="text-blue-400" />
-                        <span className="text-xs text-blue-400">ReelSkill Uploaded</span>
-                      </div>
-                    )}
-                  </button>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -554,6 +610,7 @@ const ReelSkillsDashboard: React.FC = () => {
             isOpen={showSkillDetail}
             onClose={() => setShowSkillDetail(false)}
             onUpdate={handleUpdateSkill}
+            onDelete={handleDeleteSkill}
           />
         )}
       </div>
