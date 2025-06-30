@@ -7,8 +7,9 @@ import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
 import { VideoUploadModal } from './VideoUploadModal';
 import { SkillDetailModal } from './SkillDetailModal';
+import { ProfileCompletion } from './ProfileCompletion';
 import { ErrorHandler, withRetry } from '../lib/errorHandling';
-import { Target, Plus, Brain, Star, Award, Video, CheckCircle, Upload, Play, Edit, AlertCircle, Sparkles, Trash2, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { Target, Plus, Brain, Star, Award, Video, CheckCircle, Upload, Play, Edit, AlertCircle, Sparkles, Trash2, RefreshCw } from 'lucide-react';
 
 interface Skill {
   id: string;
@@ -31,7 +32,7 @@ interface Skill {
 
 const ReelSkillsDashboard: React.FC = () => {
   const { user, profile, createProfile } = useAuthStore();
-  const { showSuccess, showError, showWarning } = useToast();
+  const { showSuccess, showError, showWarning, showInfo } = useToast();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [currentSkill, setCurrentSkill] = useState<Skill | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,34 +41,9 @@ const ReelSkillsDashboard: React.FC = () => {
   const [showSkillDetail, setShowSkillDetail] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creatingProfile, setCreatingProfile] = useState(false);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [retryCount, setRetryCount] = useState(0);
 
   const supabase = getSupabaseClient();
-
-  // Network status monitoring
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      showSuccess('Connection restored', 'You\'re back online!');
-      if (error) {
-        fetchSkills(); // Retry failed operations
-      }
-    };
-
-    const handleOffline = () => {
-      setIsOnline(false);
-      showWarning('Connection lost', 'Some features may not work properly');
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [error, showSuccess, showWarning]);
 
   const handleCreateProfile = async () => {
     if (!user?.email) {
@@ -160,10 +136,6 @@ const ReelSkillsDashboard: React.FC = () => {
         setCurrentSkill(formattedSkills[0]);
       }
 
-      if (formattedSkills.length === 0) {
-        showInfo('No Skills Yet', 'Add your first skill to get started!');
-      }
-
     } catch (error) {
       console.error('Error fetching skills:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to load skills';
@@ -176,11 +148,6 @@ const ReelSkillsDashboard: React.FC = () => {
   };
 
   const handleUpdateSkill = async (skillId: string, updates: Partial<Skill>) => {
-    if (!isOnline) {
-      showError('Offline', 'Cannot update skills while offline');
-      return;
-    }
-
     try {
       const { data, error: supabaseError } = await withRetry(
         () => supabase
@@ -218,11 +185,6 @@ const ReelSkillsDashboard: React.FC = () => {
   };
 
   const handleDeleteSkill = async (skillId: string) => {
-    if (!isOnline) {
-      showError('Offline', 'Cannot delete skills while offline');
-      return;
-    }
-
     const skillToDelete = skills.find(s => s.id === skillId);
     if (!skillToDelete) return;
 
@@ -265,11 +227,6 @@ const ReelSkillsDashboard: React.FC = () => {
   const handleSave = async ({ name, category, proficiency }: Omit<Skill, 'id' | 'status' | 'years_experience' | 'verified' | 'endorsements' | 'video_verified'>) => {
     if (!profile?.id) {
       showError('Authentication Error', 'Profile not found. Please refresh the page.');
-      return;
-    }
-
-    if (!isOnline) {
-      showError('Offline', 'Cannot add skills while offline');
       return;
     }
 
@@ -408,6 +365,29 @@ const ReelSkillsDashboard: React.FC = () => {
     }
   };
 
+  const handleProfileAction = (action: string) => {
+    switch (action) {
+      case 'add-skill':
+        setIsModalOpen(true);
+        break;
+      case 'upload-video':
+        if (currentSkill) {
+          setShowVideoUpload(true);
+        } else if (skills.length > 0) {
+          setCurrentSkill(skills[0]);
+          setShowVideoUpload(true);
+        } else {
+          setIsModalOpen(true);
+        }
+        break;
+      case 'edit-profile':
+        showInfo('Coming Soon', 'Profile editing will be available soon');
+        break;
+      default:
+        break;
+    }
+  };
+
   // Retry button component
   const RetryButton = () => (
     <Button
@@ -421,31 +401,18 @@ const ReelSkillsDashboard: React.FC = () => {
     </Button>
   );
 
-  // Network status indicator
-  const NetworkStatus = () => (
-    <div className={`fixed top-4 left-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
-      isOnline 
-        ? 'bg-green-500/20 border border-green-500/30 text-green-300' 
-        : 'bg-red-500/20 border border-red-500/30 text-red-300'
-    }`}>
-      {isOnline ? <Wifi size={16} /> : <WifiOff size={16} />}
-      {isOnline ? 'Online' : 'Offline'}
-    </div>
-  );
-
   // If user exists but no profile, show profile creation
   if (user && !profile && !creatingProfile) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ 
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ 
         background: 'radial-gradient(ellipse at center, #1E293B 0%, #0F172A 100%)',
         backgroundAttachment: 'fixed'
       }}>
-        <NetworkStatus />
-        <div className="text-center max-w-md mx-auto p-6">
-          <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-8">
+        <div className="text-center max-w-sm mx-auto">
+          <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6">
             <AlertCircle size={48} className="text-yellow-400 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-white mb-2">Profile Setup Required</h2>
-            <p className="text-slate-400 mb-6">
+            <p className="text-slate-400 mb-6 text-sm">
               We need to set up your profile to get started with ReelSkills.
             </p>
             {error && (
@@ -453,27 +420,20 @@ const ReelSkillsDashboard: React.FC = () => {
                 <p className="text-red-300 text-sm">{error}</p>
               </div>
             )}
-            <div className="flex flex-col gap-3">
-              <Button 
-                onClick={handleCreateProfile}
-                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-                disabled={creatingProfile || !isOnline}
-              >
-                {creatingProfile ? (
-                  <>
-                    <LoadingSpinner size="small" />
-                    <span className="ml-2">Creating Profile...</span>
-                  </>
-                ) : (
-                  'Create Profile'
-                )}
-              </Button>
-              {!isOnline && (
-                <p className="text-yellow-400 text-sm">
-                  Please check your internet connection
-                </p>
+            <Button 
+              onClick={handleCreateProfile}
+              className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+              disabled={creatingProfile}
+            >
+              {creatingProfile ? (
+                <>
+                  <LoadingSpinner size="small" />
+                  <span className="ml-2">Creating Profile...</span>
+                </>
+              ) : (
+                'Create Profile'
               )}
-            </div>
+            </Button>
           </div>
         </div>
       </div>
@@ -487,7 +447,6 @@ const ReelSkillsDashboard: React.FC = () => {
         background: 'radial-gradient(ellipse at center, #1E293B 0%, #0F172A 100%)',
         backgroundAttachment: 'fixed'
       }}>
-        <NetworkStatus />
         <LoadingSpinner size="large" message="Setting up your profile..." />
       </div>
     );
@@ -498,15 +457,13 @@ const ReelSkillsDashboard: React.FC = () => {
       background: 'radial-gradient(ellipse at center, #1E293B 0%, #0F172A 100%)',
       backgroundAttachment: 'fixed'
     }}>
-      <NetworkStatus />
-      
-      <div className="max-w-4xl mx-auto p-6">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-cyan-400 bg-clip-text text-transparent mb-2">
+      <div className="max-w-4xl mx-auto p-3 sm:p-6">
+        {/* Header - Mobile Optimized */}
+        <div className="text-center mb-6">
+          <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-white to-cyan-400 bg-clip-text text-transparent mb-2">
             ReelSkills
           </h1>
-          <p className="text-slate-400 text-lg">
+          <p className="text-slate-400 text-base sm:text-lg">
             Showcase your expertise with video demonstrations
           </p>
         </div>
@@ -514,15 +471,17 @@ const ReelSkillsDashboard: React.FC = () => {
         {/* Error Display with Retry */}
         {error && (
           <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <AlertCircle size={20} className="text-red-400" />
-                <div>
-                  <p className="text-red-300 font-medium">Something went wrong</p>
-                  <p className="text-red-300 text-sm">{error}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3 flex-1">
+                <AlertCircle size={20} className="text-red-400 flex-shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="text-red-300 font-medium text-sm">Something went wrong</p>
+                  <p className="text-red-300 text-sm break-words">{error}</p>
                 </div>
               </div>
-              <RetryButton />
+              <div className="flex-shrink-0">
+                <RetryButton />
+              </div>
             </div>
           </div>
         )}
@@ -536,248 +495,243 @@ const ReelSkillsDashboard: React.FC = () => {
               </p>
             )}
           </div>
-        ) : skills.length === 0 ? (
-          /* No Skills State */
-          <div className="text-center py-16">
-            <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-12 max-w-md mx-auto">
-              <Target size={64} className="text-slate-400 mx-auto mb-6" />
-              <h3 className="text-2xl font-semibold text-white mb-4">Start Your Journey</h3>
-              <p className="text-slate-400 mb-8">
-                Add your first skill and create ReelSkills to showcase your expertise with AI-powered video analysis.
-              </p>
-              <Button 
-                onClick={() => setIsModalOpen(true)}
-                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-lg px-8 py-4"
-                disabled={!isOnline}
-              >
-                <Plus size={20} className="mr-2" />
-                Add Your First Skill
-              </Button>
-              {!isOnline && (
-                <p className="text-yellow-400 text-sm mt-4">
-                  Connect to the internet to add skills
-                </p>
-              )}
-            </div>
-          </div>
         ) : (
-          /* Main Content */
-          <div className="space-y-8">
-            {/* Skill Selector */}
-            <LoadingOverlay isLoading={loading && skills.length > 0} message="Refreshing skills...">
-              <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-white">Your Skills</h2>
+          <>
+            {/* Profile Completion Component */}
+            <ProfileCompletion 
+              profile={profile}
+              skills={skills}
+              onAction={handleProfileAction}
+            />
+
+            {skills.length === 0 ? (
+              /* No Skills State - Mobile Optimized */
+              <div className="text-center py-12">
+                <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-8 max-w-sm mx-auto">
+                  <Target size={48} className="text-slate-400 mx-auto mb-6" />
+                  <h3 className="text-xl font-semibold text-white mb-4">Start Your Journey</h3>
+                  <p className="text-slate-400 mb-8 text-sm">
+                    Add your first skill and create ReelSkills to showcase your expertise with AI-powered video analysis.
+                  </p>
                   <Button 
-                    size="small"
                     onClick={() => setIsModalOpen(true)}
-                    className="bg-blue-600/80 hover:bg-blue-700/80"
-                    disabled={!isOnline}
+                    className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-base px-6 py-3"
                   >
-                    <Plus size={16} className="mr-1" />
-                    Add Skill
+                    <Plus size={18} className="mr-2" />
+                    Add Your First Skill
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {skills.map((skill) => (
-                    <div
-                      key={skill.id}
-                      className={`relative group p-4 rounded-xl border transition-all ${
-                        currentSkill?.id === skill.id
-                          ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
-                          : 'border-slate-600/30 bg-slate-800/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/40'
-                      }`}
-                    >
-                      <button
-                        onClick={() => setCurrentSkill(skill)}
-                        className="w-full text-left"
-                      >
-                        <div className="font-medium mb-1">{skill.name}</div>
-                        <div className="text-xs opacity-75 capitalize">{skill.proficiency}</div>
-                        {skill.video_verified && (
-                          <div className="flex items-center gap-1 mt-2">
-                            <CheckCircle size={12} className="text-green-400" />
-                            <span className="text-xs text-green-400">AI Verified</span>
-                          </div>
-                        )}
-                        {skill.video_demo_url && !skill.video_verified && (
-                          <div className="flex items-center gap-1 mt-2">
-                            <Video size={12} className="text-blue-400" />
-                            <span className="text-xs text-blue-400">ReelSkill Uploaded</span>
-                          </div>
-                        )}
-                      </button>
-                      
-                      {/* Quick Actions Menu */}
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="flex gap-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setCurrentSkill(skill);
-                              setShowSkillDetail(true);
-                            }}
-                            className="p-1.5 bg-slate-700/80 hover:bg-blue-600/80 rounded-lg transition-colors"
-                            title="Edit skill"
-                            disabled={!isOnline}
-                          >
-                            <Edit size={12} className="text-white" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm(`Are you sure you want to delete "${skill.name}"?`)) {
-                                handleDeleteSkill(skill.id);
-                              }
-                            }}
-                            className="p-1.5 bg-slate-700/80 hover:bg-red-600/80 rounded-lg transition-colors"
-                            title="Delete skill"
-                            disabled={!isOnline}
-                          >
-                            <Trash2 size={12} className="text-white" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
-            </LoadingOverlay>
-
-            {/* Current Skill Focus */}
-            {currentSkill && (
-              <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-8">
-                <div className="text-center mb-8">
-                  <h2 className="text-3xl font-bold text-white mb-2">{currentSkill.name}</h2>
-                  <div className="flex items-center justify-center gap-4 text-slate-400">
-                    <span className="capitalize">{currentSkill.category}</span>
-                    <span>•</span>
-                    <span className="capitalize">{currentSkill.proficiency}</span>
-                    <span>•</span>
-                    <span>{currentSkill.years_experience} years</span>
-                  </div>
-                  
-                  {/* AI Rating - only show if exists */}
-                  {currentSkill.ai_rating && (
-                    <div className="flex items-center justify-center gap-2 mt-4">
-                      <span className="text-slate-400">AI Rating:</span>
-                      <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            size={16}
-                            className={i < currentSkill.ai_rating! ? 'text-yellow-400' : 'text-slate-600'}
-                            fill={i < currentSkill.ai_rating! ? 'currentColor' : 'none'}
-                          />
-                        ))}
-                        <span className="text-yellow-400 ml-1">{currentSkill.ai_rating}/5</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Main Action Button */}
-                <div className="text-center mb-8">
-                  {!currentSkill.video_demo_url ? (
-                    <Button
-                      onClick={() => setShowVideoUpload(true)}
-                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-xl px-12 py-6 rounded-2xl"
-                      disabled={!isOnline}
-                    >
-                      <Brain size={24} className="mr-3" />
-                      Upload & Analyze with AI
-                    </Button>
-                  ) : currentSkill.video_verified ? (
-                    <div className="bg-green-500/20 border border-green-500/30 rounded-2xl p-6">
-                      <div className="flex items-center justify-center gap-3 mb-3">
-                        <CheckCircle size={24} className="text-green-400" />
-                        <span className="text-xl font-bold text-green-300">AI Verified!</span>
-                      </div>
-                      <p className="text-slate-300">
-                        Your {currentSkill.name} ReelSkill has been analyzed and verified by AI. Excellent work!
-                      </p>
-                      <Button
-                        onClick={() => window.open(currentSkill.video_demo_url, '_blank')}
-                        variant="outline"
-                        className="mt-4 border-green-500/30 text-green-300"
+            ) : (
+              /* Main Content - Mobile Optimized */
+              <div className="space-y-6">
+                {/* Skill Selector - Mobile Grid */}
+                <LoadingOverlay isLoading={loading && skills.length > 0} message="Refreshing skills...">
+                  <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-bold text-white">Your Skills</h2>
+                      <Button 
+                        size="small"
+                        onClick={() => setIsModalOpen(true)}
+                        className="bg-blue-600/80 hover:bg-blue-700/80 text-sm px-3 py-2"
                       >
-                        <Play size={16} className="mr-2" />
-                        View ReelSkill
+                        <Plus size={14} className="mr-1" />
+                        Add
                       </Button>
                     </div>
-                  ) : (
-                    <div className="bg-blue-500/20 border border-blue-500/30 rounded-2xl p-6">
-                      <div className="flex items-center justify-center gap-3 mb-3">
-                        <Video size={24} className="text-blue-400" />
-                        <span className="text-xl font-bold text-blue-300">ReelSkill Ready for Analysis</span>
-                      </div>
-                      <p className="text-slate-300 mb-4">
-                        Your {currentSkill.name} ReelSkill is uploaded and ready for AI analysis.
-                      </p>
-                      <div className="flex justify-center gap-3">
-                        <Button
-                          onClick={() => window.open(currentSkill.video_demo_url, '_blank')}
-                          variant="outline"
-                          className="border-blue-500/30 text-blue-300"
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {skills.map((skill) => (
+                        <div
+                          key={skill.id}
+                          className={`relative group p-4 rounded-xl border transition-all ${
+                            currentSkill?.id === skill.id
+                              ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
+                              : 'border-slate-600/30 bg-slate-800/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/40'
+                          }`}
                         >
-                          <Play size={16} className="mr-2" />
-                          View ReelSkill
-                        </Button>
+                          <button
+                            onClick={() => setCurrentSkill(skill)}
+                            className="w-full text-left"
+                          >
+                            <div className="font-medium mb-1 text-sm sm:text-base">{skill.name}</div>
+                            <div className="text-xs opacity-75 capitalize mb-2">{skill.proficiency}</div>
+                            <div className="flex flex-wrap gap-2">
+                              {skill.video_verified && (
+                                <div className="flex items-center gap-1">
+                                  <CheckCircle size={12} className="text-green-400" />
+                                  <span className="text-xs text-green-400">AI Verified</span>
+                                </div>
+                              )}
+                              {skill.video_demo_url && !skill.video_verified && (
+                                <div className="flex items-center gap-1">
+                                  <Video size={12} className="text-blue-400" />
+                                  <span className="text-xs text-blue-400">ReelSkill</span>
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                          
+                          {/* Quick Actions Menu - Mobile Optimized */}
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCurrentSkill(skill);
+                                  setShowSkillDetail(true);
+                                }}
+                                className="p-1.5 bg-slate-700/80 hover:bg-blue-600/80 rounded-lg transition-colors"
+                                title="Edit skill"
+                              >
+                                <Edit size={12} className="text-white" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (confirm(`Are you sure you want to delete "${skill.name}"?`)) {
+                                    handleDeleteSkill(skill.id);
+                                  }
+                                }}
+                                className="p-1.5 bg-slate-700/80 hover:bg-red-600/80 rounded-lg transition-colors"
+                                title="Delete skill"
+                              >
+                                <Trash2 size={12} className="text-white" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </LoadingOverlay>
+
+                {/* Current Skill Focus - Mobile Optimized */}
+                {currentSkill && (
+                  <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6">
+                    <div className="text-center mb-6">
+                      <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">{currentSkill.name}</h2>
+                      <div className="flex flex-wrap items-center justify-center gap-2 text-slate-400 text-sm">
+                        <span className="capitalize">{currentSkill.category}</span>
+                        <span>•</span>
+                        <span className="capitalize">{currentSkill.proficiency}</span>
+                        <span>•</span>
+                        <span>{currentSkill.years_experience} years</span>
+                      </div>
+                      
+                      {/* AI Rating - only show if exists */}
+                      {currentSkill.ai_rating && (
+                        <div className="flex items-center justify-center gap-2 mt-4">
+                          <span className="text-slate-400 text-sm">AI Rating:</span>
+                          <div className="flex items-center gap-1">
+                            {[...Array(5)].map((_, i) => (
+                              <Star
+                                key={i}
+                                size={16}
+                                className={i < currentSkill.ai_rating! ? 'text-yellow-400' : 'text-slate-600'}
+                                fill={i < currentSkill.ai_rating! ? 'currentColor' : 'none'}
+                              />
+                            ))}
+                            <span className="text-yellow-400 ml-1 text-sm">{currentSkill.ai_rating}/5</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Main Action Button - Mobile Optimized */}
+                    <div className="text-center mb-6">
+                      {!currentSkill.video_demo_url ? (
                         <Button
                           onClick={() => setShowVideoUpload(true)}
-                          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                          disabled={!isOnline}
+                          className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-lg px-8 py-4 rounded-2xl"
+                        >
+                          <Brain size={20} className="mr-3" />
+                          Upload & Analyze with AI
+                        </Button>
+                      ) : currentSkill.video_verified ? (
+                        <div className="bg-green-500/20 border border-green-500/30 rounded-2xl p-6">
+                          <div className="flex items-center justify-center gap-3 mb-3">
+                            <CheckCircle size={24} className="text-green-400" />
+                            <span className="text-lg font-bold text-green-300">AI Verified!</span>
+                          </div>
+                          <p className="text-slate-300 text-sm mb-4">
+                            Your {currentSkill.name} ReelSkill has been analyzed and verified by AI. Excellent work!
+                          </p>
+                          <Button
+                            onClick={() => window.open(currentSkill.video_demo_url, '_blank')}
+                            variant="outline"
+                            className="border-green-500/30 text-green-300"
+                          >
+                            <Play size={16} className="mr-2" />
+                            View ReelSkill
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="bg-blue-500/20 border border-blue-500/30 rounded-2xl p-6">
+                          <div className="flex items-center justify-center gap-3 mb-3">
+                            <Video size={24} className="text-blue-400" />
+                            <span className="text-lg font-bold text-blue-300">ReelSkill Ready for Analysis</span>
+                          </div>
+                          <p className="text-slate-300 mb-4 text-sm">
+                            Your {currentSkill.name} ReelSkill is uploaded and ready for AI analysis.
+                          </p>
+                          <div className="flex flex-col sm:flex-row justify-center gap-3">
+                            <Button
+                              onClick={() => window.open(currentSkill.video_demo_url, '_blank')}
+                              variant="outline"
+                              className="border-blue-500/30 text-blue-300"
+                            >
+                              <Play size={16} className="mr-2" />
+                              View ReelSkill
+                            </Button>
+                            <Button
+                              onClick={() => setShowVideoUpload(true)}
+                              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                            >
+                              <Brain size={16} className="mr-2" />
+                              Analyze with AI
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* AI Feedback - only show if exists */}
+                    {currentSkill.ai_feedback && (
+                      <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 mb-6">
+                        <div className="flex items-center gap-3 mb-3">
+                          <Brain size={18} className="text-purple-400" />
+                          <h3 className="font-semibold text-white text-sm">AI Feedback</h3>
+                        </div>
+                        <p className="text-slate-300 text-sm">{currentSkill.ai_feedback}</p>
+                      </div>
+                    )}
+
+                    {/* Quick Actions - Mobile Optimized */}
+                    <div className="flex flex-col sm:flex-row justify-center gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowSkillDetail(true)}
+                        className="border-slate-600/50 text-slate-300"
+                      >
+                        <Edit size={16} className="mr-2" />
+                        Edit Details
+                      </Button>
+                      {currentSkill.video_demo_url && (
+                        <Button
+                          variant="outline"
+                          onClick={() => setShowVideoUpload(true)}
+                          className="border-purple-500/30 text-purple-300"
                         >
                           <Brain size={16} className="mr-2" />
-                          Analyze with AI
+                          Re-analyze with AI
                         </Button>
-                      </div>
+                      )}
                     </div>
-                  )}
-                  
-                  {!isOnline && (
-                    <p className="text-yellow-400 text-sm mt-4">
-                      Connect to the internet to upload and analyze ReelSkills
-                    </p>
-                  )}
-                </div>
-
-                {/* AI Feedback - only show if exists */}
-                {currentSkill.ai_feedback && (
-                  <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-6 mb-8">
-                    <div className="flex items-center gap-3 mb-3">
-                      <Brain size={20} className="text-purple-400" />
-                      <h3 className="font-semibold text-white">AI Feedback</h3>
-                    </div>
-                    <p className="text-slate-300">{currentSkill.ai_feedback}</p>
                   </div>
                 )}
-
-                {/* Quick Actions */}
-                <div className="flex justify-center gap-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowSkillDetail(true)}
-                    className="border-slate-600/50 text-slate-300"
-                  >
-                    <Edit size={16} className="mr-2" />
-                    Edit Details
-                  </Button>
-                  {currentSkill.video_demo_url && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowVideoUpload(true)}
-                      className="border-purple-500/30 text-purple-300"
-                      disabled={!isOnline}
-                    >
-                      <Brain size={16} className="mr-2" />
-                      Re-analyze with AI
-                    </Button>
-                  )}
-                </div>
               </div>
             )}
-          </div>
+          </>
         )}
 
         {/* Add Skill Modal */}

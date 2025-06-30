@@ -138,7 +138,7 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
                   <input
                     id="skill-name"
                     type="text"
-                    className={`w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-700/50 border rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm sm:text-base ${
+                    className={`w-full px-3 sm:px-4 py-3 bg-slate-700/50 border rounded-xl text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500/20 transition-all text-base ${
                       validationErrors.name 
                         ? 'border-red-500/50 focus:border-red-500/50' 
                         : 'border-slate-600/50 focus:border-blue-500/50'
@@ -167,7 +167,7 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
                   <label className="block text-sm font-medium text-slate-300 mb-3">
                     Category *
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3">
                     {categories.map((cat) => {
                       const Icon = cat.icon;
                       return (
@@ -176,18 +176,18 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
                           type="button"
                           onClick={() => setCategory(cat.value)}
                           disabled={isSaving}
-                          className={`p-3 sm:p-4 rounded-xl border transition-all text-left disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
+                          className={`p-4 rounded-xl border transition-all text-left disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
                             category === cat.value
                               ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
                               : 'border-slate-600/50 bg-slate-700/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/50'
                           }`}
                           aria-pressed={category === cat.value}
                         >
-                          <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                            <Icon size={18} className="sm:w-5 sm:h-5" />
-                            <span className="font-medium text-sm sm:text-base">{cat.label}</span>
+                          <div className="flex items-center gap-3 mb-2">
+                            <Icon size={20} />
+                            <span className="font-medium text-base">{cat.label}</span>
                           </div>
-                          <p className="text-xs opacity-75">{cat.description}</p>
+                          <p className="text-sm opacity-75">{cat.description}</p>
                         </button>
                       );
                     })}
@@ -206,16 +206,16 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
                         type="button"
                         onClick={() => setProficiency(prof.value)}
                         disabled={isSaving}
-                        className={`w-full p-2 sm:p-3 rounded-lg border transition-all text-left disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
+                        className={`w-full p-3 rounded-lg border transition-all text-left disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ${
                           proficiency === prof.value
                             ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
                             : 'border-slate-600/50 bg-slate-700/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/50'
                         }`}
                         aria-pressed={proficiency === prof.value}
                       >
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                          <span className="font-medium text-sm sm:text-base">{prof.label}</span>
-                          <span className="text-xs opacity-75 mt-1 sm:mt-0">{prof.description}</span>
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-base">{prof.label}</span>
+                          <span className="text-sm opacity-75">{prof.description}</span>
                         </div>
                       </button>
                     ))}
@@ -235,20 +235,11 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
               </div>
 
               {/* Fixed Footer */}
-              <div className="flex flex-col sm:flex-row justify-end gap-3 p-4 sm:p-6 border-t border-slate-700/50 bg-slate-800/95">
-                <Button 
-                  type="button"
-                  variant="outline" 
-                  onClick={handleClose} 
-                  disabled={isSaving}
-                  className="border-slate-600/50 text-slate-300 hover:bg-slate-700/50 w-full sm:w-auto order-2 sm:order-1"
-                >
-                  Cancel
-                </Button>
+              <div className="flex flex-col gap-3 p-4 sm:p-6 border-t border-slate-700/50 bg-slate-800/95">
                 <Button 
                   type="submit"
                   disabled={isSaving || !name.trim() || Object.keys(validationErrors).length > 0}
-                  className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-slate-600 disabled:to-slate-700 w-full sm:w-auto order-1 sm:order-2"
+                  className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-slate-600 disabled:to-slate-700 py-3 text-base"
                 >
                   {isSaving ? (
                     <>
@@ -261,6 +252,15 @@ export const AddSkillModal: React.FC<AddSkillModalProps> = ({ isOpen, onClose, o
                       Add Skill
                     </>
                   )}
+                </Button>
+                <Button 
+                  type="button"
+                  variant="outline" 
+                  onClick={handleClose} 
+                  disabled={isSaving}
+                  className="w-full border-slate-600/50 text-slate-300 hover:bg-slate-700/50 py-3 text-base"
+                >
+                  Cancel
                 </Button>
               </div>
             </form>

@@ -276,46 +276,46 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
         {/* Celebration Header */}
         <div className="text-center">
           <div className="relative">
-            <div className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <CheckCircle size={40} className="text-white" />
+            <div className="w-16 h-16 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <CheckCircle size={32} className="text-white" />
             </div>
-            <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center">
-              <Sparkles size={16} className="text-white" />
+            <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center">
+              <Sparkles size={12} className="text-white" />
             </div>
           </div>
-          <h3 className="text-3xl font-bold bg-gradient-to-r from-white to-emerald-400 bg-clip-text text-transparent mb-2">
+          <h3 className="text-2xl font-bold bg-gradient-to-r from-white to-emerald-400 bg-clip-text text-transparent mb-2">
             Analysis Complete!
           </h3>
-          <p className="text-slate-400 text-lg">Your {skillName} ReelSkill has been analyzed by AI</p>
+          <p className="text-slate-400 text-base">Your {skillName} ReelSkill has been analyzed by AI</p>
         </div>
 
         {/* Rating & Verification Card */}
-        <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-2xl p-8 text-center relative overflow-hidden">
+        <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-2xl p-6 text-center relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 to-orange-400"></div>
           
           <div className="flex items-center justify-center gap-3 mb-4">
-            <Award size={28} className="text-yellow-400" />
-            <h4 className="text-2xl font-bold text-white">Skill Assessment</h4>
+            <Award size={24} className="text-yellow-400" />
+            <h4 className="text-xl font-bold text-white">Skill Assessment</h4>
           </div>
           
           <div className="flex items-center justify-center gap-2 mb-4">
             {[...Array(5)].map((_, i) => (
               <Star
                 key={i}
-                size={32}
+                size={28}
                 className={`transition-all duration-300 ${i < rating ? 'text-yellow-400 scale-110' : 'text-slate-600'}`}
                 fill={i < rating ? 'currentColor' : 'none'}
               />
             ))}
           </div>
           
-          <div className="text-4xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent mb-4">
+          <div className="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent mb-4">
             {rating}/5 Stars
           </div>
           
           {verified && (
             <div className="inline-flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/30 rounded-full px-4 py-2">
-              <CheckCircle size={20} className="text-emerald-400" />
+              <CheckCircle size={18} className="text-emerald-400" />
               <span className="text-emerald-400 font-semibold">Skill Verified</span>
             </div>
           )}
@@ -327,28 +327,28 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
             <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
               <Brain size={20} className="text-white" />
             </div>
-            <h4 className="text-xl font-bold text-white">AI Feedback</h4>
+            <h4 className="text-lg font-bold text-white">AI Feedback</h4>
           </div>
           <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
-            <p className="text-slate-200 leading-relaxed text-lg">{feedback}</p>
+            <p className="text-slate-200 leading-relaxed">{feedback}</p>
           </div>
         </div>
 
         {/* Strengths & Improvements Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           {/* Strengths Card */}
           <div className="bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 rounded-2xl p-6">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full flex items-center justify-center">
                 <TrendingUp size={20} className="text-white" />
               </div>
-              <h4 className="text-xl font-bold text-white">Strengths</h4>
+              <h4 className="text-lg font-bold text-white">Strengths</h4>
             </div>
             <div className="space-y-3">
               {strengths.slice(0, 4).map((strength: string, index: number) => (
                 <div key={index} className="flex items-start gap-3 p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
-                  <CheckCircle size={18} className="text-emerald-400 mt-0.5 flex-shrink-0" />
-                  <span className="text-emerald-100 font-medium">{strength}</span>
+                  <CheckCircle size={16} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-emerald-100 font-medium text-sm">{strength}</span>
                 </div>
               ))}
             </div>
@@ -360,13 +360,13 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
               <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
                 <Target size={20} className="text-white" />
               </div>
-              <h4 className="text-xl font-bold text-white">Growth Areas</h4>
+              <h4 className="text-lg font-bold text-white">Growth Areas</h4>
             </div>
             <div className="space-y-3">
               {improvements.slice(0, 4).map((improvement: string, index: number) => (
                 <div key={index} className="flex items-start gap-3 p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
-                  <BookOpen size={18} className="text-blue-400 mt-0.5 flex-shrink-0" />
-                  <span className="text-blue-100 font-medium">{improvement}</span>
+                  <BookOpen size={16} className="text-blue-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-blue-100 font-medium text-sm">{improvement}</span>
                 </div>
               ))}
             </div>
@@ -380,16 +380,16 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
               <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
                 <Brain size={20} className="text-white" />
               </div>
-              <h4 className="text-xl font-bold text-white">Analysis Confidence</h4>
+              <h4 className="text-lg font-bold text-white">Analysis Confidence</h4>
             </div>
-            <div className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            <div className="text-xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
               {confidence}%
             </div>
           </div>
           <div className="relative">
-            <div className="w-full bg-slate-700/50 rounded-full h-4 overflow-hidden">
+            <div className="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden">
               <div 
-                className="bg-gradient-to-r from-purple-500 to-pink-400 h-4 rounded-full transition-all duration-2000 ease-out relative"
+                className="bg-gradient-to-r from-purple-500 to-pink-400 h-3 rounded-full transition-all duration-2000 ease-out relative"
                 style={{ width: `${confidence}%` }}
               >
                 <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
@@ -402,21 +402,21 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 pt-6">
-          <Button
-            variant="outline"
-            onClick={() => setShowResults(false)}
-            className="border-slate-600/50 text-slate-300 hover:bg-slate-700/50 flex-1 py-3"
-          >
-            <Upload size={18} className="mr-2" />
-            Upload Another ReelSkill
-          </Button>
+        <div className="flex flex-col gap-4 pt-6">
           <Button
             onClick={handleAcceptResults}
-            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 flex-1 py-3 text-lg font-semibold"
+            className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 py-4 text-lg font-semibold"
           >
             <CheckCircle size={18} className="mr-2" />
             Save to Profile
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowResults(false)}
+            className="w-full border-slate-600/50 text-slate-300 hover:bg-slate-700/50 py-3"
+          >
+            <Upload size={16} className="mr-2" />
+            Upload Another ReelSkill
           </Button>
         </div>
       </div>
@@ -431,7 +431,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
       {/* Dialog Container */}
       <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="min-h-full flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <Dialog.Panel className="w-full max-w-4xl bg-slate-800/95 backdrop-blur-sm border-0 sm:border border-slate-700/50 rounded-t-xl sm:rounded-xl shadow-2xl transform transition-all flex flex-col max-h-screen sm:max-h-[95vh]">
+          <Dialog.Panel className="w-full max-w-2xl bg-slate-800/95 backdrop-blur-sm border-0 sm:border border-slate-700/50 rounded-t-xl sm:rounded-xl shadow-2xl transform transition-all flex flex-col max-h-screen sm:max-h-[95vh]">
             {/* Fixed Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-700/50 flex-shrink-0">
               <div>
@@ -456,7 +456,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
               {showResults ? (
                 <ResultsDisplay />
               ) : (
-                <div className="space-y-4 sm:space-y-6">
+                <div className="space-y-6">
                   {/* Error Display */}
                   {error && (
                     <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 flex items-center gap-3">
@@ -470,39 +470,39 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                     <label className="block text-sm font-medium text-slate-300 mb-3">
                       How would you like to share your ReelSkill?
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3">
                       <button
                         type="button"
                         onClick={() => setUploadMethod('file')}
                         disabled={isProcessing}
-                        className={`p-3 sm:p-4 rounded-xl border transition-all text-left disabled:opacity-50 ${
+                        className={`p-4 rounded-xl border transition-all text-left disabled:opacity-50 ${
                           uploadMethod === 'file'
                             ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
                             : 'border-slate-600/50 bg-slate-700/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/50'
                         }`}
                       >
-                        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                          <Cloud size={18} className="sm:w-5 sm:h-5" />
-                          <span className="font-medium text-sm sm:text-base">Upload ReelSkill</span>
+                        <div className="flex items-center gap-3 mb-2">
+                          <Cloud size={20} />
+                          <span className="font-medium text-base">Upload ReelSkill</span>
                         </div>
-                        <p className="text-xs opacity-75">Upload your video directly to secure storage</p>
+                        <p className="text-sm opacity-75">Upload your video directly to secure storage</p>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setUploadMethod('url')}
                         disabled={isProcessing}
-                        className={`p-3 sm:p-4 rounded-xl border transition-all text-left disabled:opacity-50 ${
+                        className={`p-4 rounded-xl border transition-all text-left disabled:opacity-50 ${
                           uploadMethod === 'url'
                             ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
                             : 'border-slate-600/50 bg-slate-700/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/50'
                         }`}
                       >
-                        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                          <Video size={18} className="sm:w-5 sm:h-5" />
-                          <span className="font-medium text-sm sm:text-base">Link ReelSkill</span>
+                        <div className="flex items-center gap-3 mb-2">
+                          <Video size={20} />
+                          <span className="font-medium text-base">Link ReelSkill</span>
                         </div>
-                        <p className="text-xs opacity-75">Share from YouTube, Vimeo, or other platforms</p>
+                        <p className="text-sm opacity-75">Share from YouTube, Vimeo, or other platforms</p>
                       </button>
                     </div>
                   </div>
@@ -514,7 +514,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                         Select Your ReelSkill Video
                       </label>
                       <div
-                        className={`border-2 border-dashed rounded-xl p-4 sm:p-6 text-center transition-all ${
+                        className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
                           videoFile 
                             ? 'border-green-500/50 bg-green-500/10' 
                             : 'border-slate-600/50 bg-slate-700/20 hover:border-slate-500/50'
@@ -531,9 +531,9 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                         
                         {videoFile ? (
                           <div className="space-y-2">
-                            <CheckCircle size={24} className="sm:w-8 sm:h-8 text-green-400 mx-auto" />
-                            <p className="text-green-300 font-medium text-sm sm:text-base">{videoFile.name}</p>
-                            <p className="text-slate-400 text-xs sm:text-sm">
+                            <CheckCircle size={32} className="text-green-400 mx-auto" />
+                            <p className="text-green-300 font-medium">{videoFile.name}</p>
+                            <p className="text-slate-400 text-sm">
                               {(videoFile.size / (1024 * 1024)).toFixed(1)} MB ReelSkill ready!
                             </p>
                             <Button
@@ -541,25 +541,25 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                               variant="outline"
                               onClick={() => fileInputRef.current?.click()}
                               disabled={isProcessing}
-                              className="border-slate-600/50 text-slate-300 text-xs sm:text-sm"
+                              className="border-slate-600/50 text-slate-300"
                             >
                               Change ReelSkill
                             </Button>
                           </div>
                         ) : (
                           <div className="space-y-3">
-                            <FileVideo size={24} className="sm:w-8 sm:h-8 text-slate-400 mx-auto" />
+                            <FileVideo size={32} className="text-slate-400 mx-auto" />
                             <div>
-                              <p className="text-white font-medium text-sm sm:text-base">Choose your ReelSkill video</p>
-                              <p className="text-slate-400 text-xs sm:text-sm">MP4, MOV, AVI up to 100MB</p>
+                              <p className="text-white font-medium">Choose your ReelSkill video</p>
+                              <p className="text-slate-400 text-sm">MP4, MOV, AVI up to 100MB</p>
                             </div>
                             <Button
                               size="small"
                               onClick={() => fileInputRef.current?.click()}
                               disabled={isProcessing}
-                              className="bg-blue-600/80 hover:bg-blue-700/80 text-xs sm:text-sm"
+                              className="bg-blue-600/80 hover:bg-blue-700/80"
                             >
-                              <Upload size={12} className="sm:w-3.5 sm:h-3.5 mr-1" />
+                              <Upload size={14} className="mr-1" />
                               Select ReelSkill
                             </Button>
                           </div>
@@ -579,7 +579,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                         value={videoUrl}
                         onChange={(e) => setVideoUrl(e.target.value)}
                         placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm sm:text-base"
+                        className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-base"
                         disabled={isProcessing}
                       />
                       <p className="text-slate-400 text-xs mt-2">
@@ -593,15 +593,15 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                     <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
                       <div className="flex items-center gap-3 mb-3">
                         <Cloud size={20} className="text-blue-400" />
-                        <h4 className="font-semibold text-white text-sm sm:text-base">Uploading Your ReelSkill...</h4>
+                        <h4 className="font-semibold text-white">Uploading Your ReelSkill...</h4>
                       </div>
-                      <div className="w-full bg-slate-700/30 rounded-full h-2 sm:h-3 mb-2">
+                      <div className="w-full bg-slate-700/30 rounded-full h-3 mb-2">
                         <div 
-                          className="bg-gradient-to-r from-blue-500 to-cyan-400 h-2 sm:h-3 rounded-full transition-all duration-300"
+                          className="bg-gradient-to-r from-blue-500 to-cyan-400 h-3 rounded-full transition-all duration-300"
                           style={{ width: `${uploadProgress}%` }}
                         />
                       </div>
-                      <p className="text-slate-300 text-xs sm:text-sm">{uploadProgress}% complete</p>
+                      <p className="text-slate-300 text-sm">{uploadProgress}% complete</p>
                     </div>
                   )}
 
@@ -610,15 +610,15 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                     <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
                       <div className="flex items-center gap-3 mb-3">
                         <Brain size={20} className="text-purple-400" />
-                        <h4 className="font-semibold text-white text-sm sm:text-base">AI Analyzing Your ReelSkill...</h4>
+                        <h4 className="font-semibold text-white">AI Analyzing Your ReelSkill...</h4>
                       </div>
-                      <div className="w-full bg-slate-700/30 rounded-full h-2 sm:h-3 mb-2">
+                      <div className="w-full bg-slate-700/30 rounded-full h-3 mb-2">
                         <div 
-                          className="bg-gradient-to-r from-purple-500 to-pink-400 h-2 sm:h-3 rounded-full transition-all duration-500"
+                          className="bg-gradient-to-r from-purple-500 to-pink-400 h-3 rounded-full transition-all duration-500"
                           style={{ width: `${analysisProgress}%` }}
                         />
                       </div>
-                      <p className="text-slate-300 text-xs sm:text-sm">
+                      <p className="text-slate-300 text-sm">
                         {analysisProgress < 30 ? 'Processing video content...' :
                          analysisProgress < 60 ? 'Analyzing skill demonstration...' :
                          analysisProgress < 90 ? 'Generating feedback and rating...' :
@@ -631,13 +631,13 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                   {!isProcessing && (
                     <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl p-4">
                       <div className="flex items-center gap-3 mb-2">
-                        <Brain size={18} className="sm:w-5 sm:h-5 text-purple-400" />
-                        <h4 className="font-semibold text-white text-sm sm:text-base">AI-Powered Analysis</h4>
+                        <Brain size={20} className="text-purple-400" />
+                        <h4 className="font-semibold text-white">AI-Powered Analysis</h4>
                       </div>
-                      <p className="text-slate-300 text-xs sm:text-sm mb-3">
+                      <p className="text-slate-300 text-sm mb-3">
                         Advanced AI will analyze your ReelSkill and provide:
                       </p>
-                      <ul className="text-slate-300 text-xs sm:text-sm space-y-1">
+                      <ul className="text-slate-300 text-sm space-y-1">
                         <li className="flex items-center gap-2">
                           <Star size={12} className="text-yellow-400" />
                           Skill proficiency rating (1-5 stars)
@@ -660,8 +660,8 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
 
                   {/* ReelSkill Tips */}
                   <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
-                    <h4 className="font-semibold text-white mb-3 text-sm sm:text-base">💡 ReelSkill Tips</h4>
-                    <ul className="space-y-1 text-xs sm:text-sm text-slate-300">
+                    <h4 className="font-semibold text-white mb-3">💡 ReelSkill Tips</h4>
+                    <ul className="space-y-1 text-sm text-slate-300">
                       <li>• Keep your ReelSkill under 3 minutes for best engagement</li>
                       <li>• Show real problem-solving, not just theory</li>
                       <li>• Explain your thought process as you work</li>
@@ -675,15 +675,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
 
             {/* Fixed Footer - Only show if not showing results */}
             {!showResults && (
-              <div className="flex flex-col sm:flex-row justify-end gap-3 p-4 sm:p-6 border-t border-slate-700/50 bg-slate-800/95 flex-shrink-0">
-                <Button 
-                  variant="outline" 
-                  onClick={handleClose} 
-                  disabled={isProcessing}
-                  className="border-slate-600/50 text-slate-300 w-full sm:w-auto order-2 sm:order-1"
-                >
-                  Cancel
-                </Button>
+              <div className="flex flex-col gap-3 p-4 sm:p-6 border-t border-slate-700/50 bg-slate-800/95 flex-shrink-0">
                 <Button 
                   onClick={handleAnalyze} 
                   disabled={
@@ -691,7 +683,7 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                     (uploadMethod === 'file' && !videoFile) || 
                     (uploadMethod === 'url' && !videoUrl.trim())
                   }
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-700 w-full sm:w-auto order-1 sm:order-2"
+                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-700 py-3 text-base"
                 >
                   {isUploading ? (
                     <>
@@ -709,6 +701,14 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
                       Analyze with AI
                     </>
                   )}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={handleClose} 
+                  disabled={isProcessing}
+                  className="w-full border-slate-600/50 text-slate-300 py-3 text-base"
+                >
+                  Cancel
                 </Button>
               </div>
             )}
