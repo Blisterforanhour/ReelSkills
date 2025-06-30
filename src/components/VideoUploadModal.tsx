@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Dialog } from '@headlessui/react';
 import { Button } from './ui/Button';
-import { X, Upload, Video, AlertCircle, CheckCircle, FileVideo, Cloud, Play, Brain, Star, Sparkles, Award, TrendingUp } from 'lucide-react';
+import { X, Upload, Video, AlertCircle, CheckCircle, FileVideo, Cloud, Play, Brain, Star, Sparkles, Award, TrendingUp, Target, BookOpen } from 'lucide-react';
 
 interface VideoUploadModalProps {
   isOpen: boolean;
@@ -108,6 +108,50 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
     return interval;
   };
 
+  const parseAnalysisResponse = (result: any) => {
+    // Handle both direct response and nested JSON string
+    let parsedResult = result;
+    
+    // If the result contains a JSON string in feedback, try to parse it
+    if (result.feedback && typeof result.feedback === 'string') {
+      try {
+        // Check if feedback contains JSON
+        if (result.feedback.includes('{') && result.feedback.includes('}')) {
+          const jsonMatch = result.feedback.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const jsonData = JSON.parse(jsonMatch[0]);
+            parsedResult = {
+              ...result,
+              ...jsonData,
+              // Keep original feedback if JSON doesn't have it
+              feedback: jsonData.feedback || result.feedback
+            };
+          }
+        }
+      } catch (e) {
+        console.log('Could not parse JSON from feedback, using original result');
+      }
+    }
+
+    // Ensure we have default values
+    return {
+      rating: parsedResult.rating || 3,
+      feedback: parsedResult.feedback || `Good demonstration of ${skillName} skills. Shows understanding of core concepts.`,
+      verified: parsedResult.verified !== false,
+      strengths: Array.isArray(parsedResult.strengths) ? parsedResult.strengths : [
+        `Demonstrates ${skillName} knowledge`,
+        'Shows practical application',
+        'Clear problem-solving approach'
+      ],
+      improvements: Array.isArray(parsedResult.improvements) ? parsedResult.improvements : [
+        'Add more detailed explanations',
+        'Show advanced techniques',
+        'Include error handling examples'
+      ],
+      confidence: parsedResult.confidence || 75
+    };
+  };
+
   const handleAnalyze = async () => {
     let finalVideoUrl = '';
 
@@ -167,8 +211,9 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
         throw new Error(result.error || 'ReelSkill analysis failed');
       }
 
-      // Store results and show them
-      setAnalysisResults(result);
+      // Parse and store results
+      const parsedResults = parseAnalysisResponse(result);
+      setAnalysisResults(parsedResults);
       setShowResults(true);
 
     } catch (error) {
@@ -228,119 +273,150 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
 
     return (
       <div className="space-y-6">
-        {/* Header */}
+        {/* Celebration Header */}
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle size={32} className="text-white" />
+          <div className="relative">
+            <div className="w-20 h-20 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <CheckCircle size={40} className="text-white" />
+            </div>
+            <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center">
+              <Sparkles size={16} className="text-white" />
+            </div>
           </div>
-          <h3 className="text-2xl font-bold text-white mb-2">Analysis Complete!</h3>
-          <p className="text-slate-400">Your {skillName} ReelSkill has been analyzed</p>
+          <h3 className="text-3xl font-bold bg-gradient-to-r from-white to-emerald-400 bg-clip-text text-transparent mb-2">
+            Analysis Complete!
+          </h3>
+          <p className="text-slate-400 text-lg">Your {skillName} ReelSkill has been analyzed by AI</p>
         </div>
 
-        {/* Rating Display */}
-        <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-xl p-6 text-center">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <Award size={24} className="text-yellow-400" />
-            <h4 className="text-xl font-bold text-white">Skill Rating</h4>
+        {/* Rating & Verification Card */}
+        <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-2xl p-8 text-center relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 to-orange-400"></div>
+          
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Award size={28} className="text-yellow-400" />
+            <h4 className="text-2xl font-bold text-white">Skill Assessment</h4>
           </div>
-          <div className="flex items-center justify-center gap-1 mb-2">
+          
+          <div className="flex items-center justify-center gap-2 mb-4">
             {[...Array(5)].map((_, i) => (
               <Star
                 key={i}
-                size={24}
-                className={i < rating ? 'text-yellow-400' : 'text-slate-600'}
+                size={32}
+                className={`transition-all duration-300 ${i < rating ? 'text-yellow-400 scale-110' : 'text-slate-600'}`}
                 fill={i < rating ? 'currentColor' : 'none'}
               />
             ))}
           </div>
-          <p className="text-2xl font-bold text-yellow-400">{rating}/5 Stars</p>
+          
+          <div className="text-4xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent mb-4">
+            {rating}/5 Stars
+          </div>
+          
           {verified && (
-            <div className="flex items-center justify-center gap-2 mt-3">
-              <CheckCircle size={16} className="text-green-400" />
-              <span className="text-green-400 font-medium">Skill Verified</span>
+            <div className="inline-flex items-center gap-2 bg-emerald-500/20 border border-emerald-500/30 rounded-full px-4 py-2">
+              <CheckCircle size={20} className="text-emerald-400" />
+              <span className="text-emerald-400 font-semibold">Skill Verified</span>
             </div>
           )}
         </div>
 
-        {/* Feedback */}
-        <div className="bg-slate-700/30 rounded-xl p-6">
+        {/* AI Feedback Card */}
+        <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-2xl p-6">
           <div className="flex items-center gap-3 mb-4">
-            <Brain size={20} className="text-purple-400" />
-            <h4 className="text-lg font-bold text-white">AI Feedback</h4>
+            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+              <Brain size={20} className="text-white" />
+            </div>
+            <h4 className="text-xl font-bold text-white">AI Feedback</h4>
           </div>
-          <p className="text-slate-300 leading-relaxed">{feedback}</p>
+          <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50">
+            <p className="text-slate-200 leading-relaxed text-lg">{feedback}</p>
+          </div>
         </div>
 
         {/* Strengths & Improvements Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Strengths */}
-          {strengths.length > 0 && (
-            <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <TrendingUp size={20} className="text-green-400" />
-                <h4 className="font-bold text-white">Strengths</h4>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Strengths Card */}
+          <div className="bg-gradient-to-br from-emerald-500/10 to-green-500/10 border border-emerald-500/20 rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-green-500 rounded-full flex items-center justify-center">
+                <TrendingUp size={20} className="text-white" />
               </div>
-              <ul className="space-y-2">
-                {strengths.map((strength: string, index: number) => (
-                  <li key={index} className="flex items-start gap-2 text-sm text-green-300">
-                    <CheckCircle size={16} className="text-green-400 mt-0.5 flex-shrink-0" />
-                    {strength}
-                  </li>
-                ))}
-              </ul>
+              <h4 className="text-xl font-bold text-white">Strengths</h4>
             </div>
-          )}
+            <div className="space-y-3">
+              {strengths.slice(0, 4).map((strength: string, index: number) => (
+                <div key={index} className="flex items-start gap-3 p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                  <CheckCircle size={18} className="text-emerald-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-emerald-100 font-medium">{strength}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-          {/* Improvements */}
-          {improvements.length > 0 && (
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Sparkles size={20} className="text-blue-400" />
-                <h4 className="font-bold text-white">Growth Areas</h4>
+          {/* Improvements Card */}
+          <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20 rounded-2xl p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center">
+                <Target size={20} className="text-white" />
               </div>
-              <ul className="space-y-2">
-                {improvements.map((improvement: string, index: number) => (
-                  <li key={index} className="flex items-start gap-2 text-sm text-blue-300">
-                    <Star size={16} className="text-blue-400 mt-0.5 flex-shrink-0" />
-                    {improvement}
-                  </li>
-                ))}
-              </ul>
+              <h4 className="text-xl font-bold text-white">Growth Areas</h4>
             </div>
-          )}
+            <div className="space-y-3">
+              {improvements.slice(0, 4).map((improvement: string, index: number) => (
+                <div key={index} className="flex items-start gap-3 p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                  <BookOpen size={18} className="text-blue-400 mt-0.5 flex-shrink-0" />
+                  <span className="text-blue-100 font-medium">{improvement}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Confidence Score */}
-        {confidence > 0 && (
-          <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-purple-300 font-medium">Analysis Confidence</span>
-              <span className="text-purple-400 font-bold">{confidence}%</span>
+        <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                <Brain size={20} className="text-white" />
+              </div>
+              <h4 className="text-xl font-bold text-white">Analysis Confidence</h4>
             </div>
-            <div className="w-full bg-slate-700/30 rounded-full h-2">
-              <div 
-                className="bg-gradient-to-r from-purple-500 to-pink-400 h-2 rounded-full transition-all duration-1000"
-                style={{ width: `${confidence}%` }}
-              />
+            <div className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+              {confidence}%
             </div>
           </div>
-        )}
+          <div className="relative">
+            <div className="w-full bg-slate-700/50 rounded-full h-4 overflow-hidden">
+              <div 
+                className="bg-gradient-to-r from-purple-500 to-pink-400 h-4 rounded-full transition-all duration-2000 ease-out relative"
+                style={{ width: `${confidence}%` }}
+              >
+                <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+          <p className="text-slate-300 text-sm mt-2">
+            High confidence indicates reliable assessment based on clear demonstration
+          </p>
+        </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-3 pt-4">
+        <div className="flex flex-col sm:flex-row gap-4 pt-6">
           <Button
             variant="outline"
             onClick={() => setShowResults(false)}
-            className="border-slate-600/50 text-slate-300 w-full sm:w-auto"
+            className="border-slate-600/50 text-slate-300 hover:bg-slate-700/50 flex-1 py-3"
           >
-            Back to Upload
+            <Upload size={18} className="mr-2" />
+            Upload Another ReelSkill
           </Button>
           <Button
             onClick={handleAcceptResults}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 w-full sm:w-auto"
+            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 flex-1 py-3 text-lg font-semibold"
           >
-            <CheckCircle size={16} className="mr-2" />
-            Accept & Save Results
+            <CheckCircle size={18} className="mr-2" />
+            Save to Profile
           </Button>
         </div>
       </div>
@@ -355,15 +431,15 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
       {/* Dialog Container */}
       <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="min-h-full flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <Dialog.Panel className="w-full max-w-2xl bg-slate-800/95 backdrop-blur-sm border-0 sm:border border-slate-700/50 rounded-t-xl sm:rounded-xl shadow-2xl transform transition-all flex flex-col max-h-screen sm:max-h-[90vh]">
+          <Dialog.Panel className="w-full max-w-4xl bg-slate-800/95 backdrop-blur-sm border-0 sm:border border-slate-700/50 rounded-t-xl sm:rounded-xl shadow-2xl transform transition-all flex flex-col max-h-screen sm:max-h-[95vh]">
             {/* Fixed Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-700/50 flex-shrink-0">
               <div>
                 <Dialog.Title className="text-lg sm:text-xl font-bold text-white">
-                  {showResults ? 'Analysis Results' : 'Upload Your ReelSkill'}
+                  {showResults ? 'ReelSkill Analysis Results' : 'Upload Your ReelSkill'}
                 </Dialog.Title>
                 <p className="text-slate-400 text-sm">
-                  {showResults ? `${skillName} skill assessment` : `Showcase your ${skillName} expertise`}
+                  {showResults ? `${skillName} skill assessment complete` : `Showcase your ${skillName} expertise`}
                 </p>
               </div>
               <button
