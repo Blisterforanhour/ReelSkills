@@ -468,7 +468,85 @@ const ReelSkillsDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Profile Completion Component - NOW AT THE TOP */}
+        {/* AI Feedback & Quick Actions - NOW AT THE TOP */}
+        {currentSkill && (
+          <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-4 sm:p-6 mb-6">
+            {/* Current Skill Header */}
+            <div className="text-center mb-6">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">{currentSkill.name}</h2>
+              <div className="flex flex-wrap items-center justify-center gap-2 text-slate-400 text-sm">
+                <span className="capitalize">{currentSkill.category}</span>
+                <span>•</span>
+                <span className="capitalize">{currentSkill.proficiency}</span>
+                <span>•</span>
+                <span>{currentSkill.years_experience} years</span>
+              </div>
+              
+              {/* AI Rating - only show if exists */}
+              {currentSkill.ai_rating && (
+                <div className="flex items-center justify-center gap-2 mt-4">
+                  <span className="text-slate-400 text-sm">AI Rating:</span>
+                  <div className="flex items-center gap-1">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        size={16}
+                        className={i < currentSkill.ai_rating! ? 'text-yellow-400' : 'text-slate-600'}
+                        fill={i < currentSkill.ai_rating! ? 'currentColor' : 'none'}
+                      />
+                    ))}
+                    <span className="text-yellow-400 ml-1 text-sm">{currentSkill.ai_rating}/5</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* AI Feedback - only show if exists */}
+            {currentSkill.ai_feedback && (
+              <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 mb-6">
+                <div className="flex items-center gap-3 mb-3">
+                  <Brain size={18} className="text-purple-400" />
+                  <h3 className="font-semibold text-white text-sm">AI Feedback</h3>
+                </div>
+                <p className="text-slate-300 text-sm">{currentSkill.ai_feedback}</p>
+              </div>
+            )}
+
+            {/* Quick Actions - Mobile Optimized */}
+            <div className="flex flex-col sm:flex-row justify-center gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowSkillDetail(true)}
+                className="border-slate-600/50 text-slate-300"
+              >
+                <Edit size={16} className="mr-2" />
+                Edit Details
+              </Button>
+              {currentSkill.video_demo_url && (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowVideoUpload(true)}
+                  className="border-purple-500/30 text-purple-300"
+                >
+                  <Brain size={16} className="mr-2" />
+                  Re-analyze with AI
+                </Button>
+              )}
+              {currentSkill.video_demo_url && (
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(currentSkill.video_demo_url, '_blank')}
+                  className="border-blue-500/30 text-blue-300"
+                >
+                  <Play size={16} className="mr-2" />
+                  View ReelSkill
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Profile Completion Component */}
         <ProfileCompletion 
           profile={profile}
           skills={skills}
@@ -606,35 +684,6 @@ const ReelSkillsDashboard: React.FC = () => {
             {/* Current Skill Focus - Mobile Optimized */}
             {currentSkill && (
               <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6">
-                <div className="text-center mb-6">
-                  <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">{currentSkill.name}</h2>
-                  <div className="flex flex-wrap items-center justify-center gap-2 text-slate-400 text-sm">
-                    <span className="capitalize">{currentSkill.category}</span>
-                    <span>•</span>
-                    <span className="capitalize">{currentSkill.proficiency}</span>
-                    <span>•</span>
-                    <span>{currentSkill.years_experience} years</span>
-                  </div>
-                  
-                  {/* AI Rating - only show if exists */}
-                  {currentSkill.ai_rating && (
-                    <div className="flex items-center justify-center gap-2 mt-4">
-                      <span className="text-slate-400 text-sm">AI Rating:</span>
-                      <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            size={16}
-                            className={i < currentSkill.ai_rating! ? 'text-yellow-400' : 'text-slate-600'}
-                            fill={i < currentSkill.ai_rating! ? 'currentColor' : 'none'}
-                          />
-                        ))}
-                        <span className="text-yellow-400 ml-1 text-sm">{currentSkill.ai_rating}/5</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
                 {/* Main Action Button - Mobile Optimized */}
                 <div className="text-center mb-6">
                   {!currentSkill.video_demo_url ? (
@@ -690,39 +739,6 @@ const ReelSkillsDashboard: React.FC = () => {
                         </Button>
                       </div>
                     </div>
-                  )}
-                </div>
-
-                {/* AI Feedback - only show if exists */}
-                {currentSkill.ai_feedback && (
-                  <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4 mb-6">
-                    <div className="flex items-center gap-3 mb-3">
-                      <Brain size={18} className="text-purple-400" />
-                      <h3 className="font-semibold text-white text-sm">AI Feedback</h3>
-                    </div>
-                    <p className="text-slate-300 text-sm">{currentSkill.ai_feedback}</p>
-                  </div>
-                )}
-
-                {/* Quick Actions - Mobile Optimized */}
-                <div className="flex flex-col sm:flex-row justify-center gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowSkillDetail(true)}
-                    className="border-slate-600/50 text-slate-300"
-                  >
-                    <Edit size={16} className="mr-2" />
-                    Edit Details
-                  </Button>
-                  {currentSkill.video_demo_url && (
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowVideoUpload(true)}
-                      className="border-purple-500/30 text-purple-300"
-                    >
-                      <Brain size={16} className="mr-2" />
-                      Re-analyze with AI
-                    </Button>
                   )}
                 </div>
               </div>
