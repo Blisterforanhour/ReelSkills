@@ -104,7 +104,22 @@ const ReelSkillsDashboard: React.FC = () => {
       );
 
       if (supabaseError) {
-        const appError = ErrorHandler.handleSupabaseError(supabaseError);
+        // Properly categorize the error type
+        let appError;
+        
+        // Check if it's a network error
+        if (supabaseError.message && supabaseError.message.includes('Failed to fetch')) {
+          appError = ErrorHandler.handleNetworkError(supabaseError);
+        }
+        // Check if it's a Supabase database error (has code property)
+        else if ('code' in supabaseError && supabaseError.code) {
+          appError = ErrorHandler.handleSupabaseError(supabaseError);
+        }
+        // Handle any other unexpected error types
+        else {
+          appError = ErrorHandler.handleGenericError(supabaseError);
+        }
+        
         throw new Error(appError.userMessage);
       }
 
@@ -163,7 +178,19 @@ const ReelSkillsDashboard: React.FC = () => {
       );
 
       if (supabaseError) {
-        const appError = ErrorHandler.handleSupabaseError(supabaseError);
+        // Properly categorize the error type
+        let appError;
+        
+        if (supabaseError.message && supabaseError.message.includes('Failed to fetch')) {
+          appError = ErrorHandler.handleNetworkError(supabaseError);
+        }
+        else if ('code' in supabaseError && supabaseError.code) {
+          appError = ErrorHandler.handleSupabaseError(supabaseError);
+        }
+        else {
+          appError = ErrorHandler.handleGenericError(supabaseError);
+        }
+        
         throw new Error(appError.userMessage);
       }
 
@@ -197,7 +224,19 @@ const ReelSkillsDashboard: React.FC = () => {
       );
 
       if (supabaseError) {
-        const appError = ErrorHandler.handleSupabaseError(supabaseError);
+        // Properly categorize the error type
+        let appError;
+        
+        if (supabaseError.message && supabaseError.message.includes('Failed to fetch')) {
+          appError = ErrorHandler.handleNetworkError(supabaseError);
+        }
+        else if ('code' in supabaseError && supabaseError.code) {
+          appError = ErrorHandler.handleSupabaseError(supabaseError);
+        }
+        else {
+          appError = ErrorHandler.handleGenericError(supabaseError);
+        }
+        
         throw new Error(appError.userMessage);
       }
 
@@ -268,7 +307,19 @@ const ReelSkillsDashboard: React.FC = () => {
       );
 
       if (supabaseError) {
-        const appError = ErrorHandler.handleSupabaseError(supabaseError);
+        // Properly categorize the error type
+        let appError;
+        
+        if (supabaseError.message && supabaseError.message.includes('Failed to fetch')) {
+          appError = ErrorHandler.handleNetworkError(supabaseError);
+        }
+        else if ('code' in supabaseError && supabaseError.code) {
+          appError = ErrorHandler.handleSupabaseError(supabaseError);
+        }
+        else {
+          appError = ErrorHandler.handleGenericError(supabaseError);
+        }
+        
         throw new Error(appError.userMessage);
       }
 
@@ -341,7 +392,19 @@ const ReelSkillsDashboard: React.FC = () => {
       );
 
       if (supabaseError) {
-        const appError = ErrorHandler.handleSupabaseError(supabaseError);
+        // Properly categorize the error type
+        let appError;
+        
+        if (supabaseError.message && supabaseError.message.includes('Failed to fetch')) {
+          appError = ErrorHandler.handleNetworkError(supabaseError);
+        }
+        else if ('code' in supabaseError && supabaseError.code) {
+          appError = ErrorHandler.handleSupabaseError(supabaseError);
+        }
+        else {
+          appError = ErrorHandler.handleGenericError(supabaseError);
+        }
+        
         throw new Error(appError.userMessage);
       }
 
