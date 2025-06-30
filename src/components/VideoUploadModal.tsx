@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Dialog } from '@headlessui/react';
 import { Button } from './ui/Button';
-import { X, Upload, Video, AlertCircle, CheckCircle, FileVideo, Cloud, Play, Brain, Star } from 'lucide-react';
+import { X, Upload, Video, AlertCircle, CheckCircle, FileVideo, Cloud, Play, Brain, Star, Sparkles, Award, TrendingUp } from 'lucide-react';
 
 interface VideoUploadModalProps {
   isOpen: boolean;
@@ -34,6 +34,8 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [showResults, setShowResults] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -165,19 +167,9 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
         throw new Error(result.error || 'ReelSkill analysis failed');
       }
 
-      // Wait a moment to show 100% completion
-      setTimeout(() => {
-        onVideoAnalyzed({
-          rating: result.rating,
-          feedback: result.feedback,
-          verified: result.verified,
-          strengths: result.strengths,
-          improvements: result.improvements,
-          confidence: result.confidence
-        });
-        resetForm();
-        onClose();
-      }, 1000);
+      // Store results and show them
+      setAnalysisResults(result);
+      setShowResults(true);
 
     } catch (error) {
       clearInterval(progressInterval);
@@ -191,12 +183,29 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
     }
   };
 
+  const handleAcceptResults = () => {
+    if (analysisResults) {
+      onVideoAnalyzed({
+        rating: analysisResults.rating,
+        feedback: analysisResults.feedback,
+        verified: analysisResults.verified,
+        strengths: analysisResults.strengths,
+        improvements: analysisResults.improvements,
+        confidence: analysisResults.confidence
+      });
+    }
+    resetForm();
+    onClose();
+  };
+
   const resetForm = () => {
     setVideoFile(null);
     setVideoUrl('');
     setUploadProgress(0);
     setAnalysisProgress(0);
     setError(null);
+    setShowResults(false);
+    setAnalysisResults(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -211,22 +220,151 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
 
   const isProcessing = isUploading || isAnalyzing;
 
+  // Results Display Component
+  const ResultsDisplay = () => {
+    if (!analysisResults) return null;
+
+    const { rating, feedback, verified, strengths = [], improvements = [], confidence = 0 } = analysisResults;
+
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle size={32} className="text-white" />
+          </div>
+          <h3 className="text-2xl font-bold text-white mb-2">Analysis Complete!</h3>
+          <p className="text-slate-400">Your {skillName} ReelSkill has been analyzed</p>
+        </div>
+
+        {/* Rating Display */}
+        <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-xl p-6 text-center">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <Award size={24} className="text-yellow-400" />
+            <h4 className="text-xl font-bold text-white">Skill Rating</h4>
+          </div>
+          <div className="flex items-center justify-center gap-1 mb-2">
+            {[...Array(5)].map((_, i) => (
+              <Star
+                key={i}
+                size={24}
+                className={i < rating ? 'text-yellow-400' : 'text-slate-600'}
+                fill={i < rating ? 'currentColor' : 'none'}
+              />
+            ))}
+          </div>
+          <p className="text-2xl font-bold text-yellow-400">{rating}/5 Stars</p>
+          {verified && (
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <CheckCircle size={16} className="text-green-400" />
+              <span className="text-green-400 font-medium">Skill Verified</span>
+            </div>
+          )}
+        </div>
+
+        {/* Feedback */}
+        <div className="bg-slate-700/30 rounded-xl p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Brain size={20} className="text-purple-400" />
+            <h4 className="text-lg font-bold text-white">AI Feedback</h4>
+          </div>
+          <p className="text-slate-300 leading-relaxed">{feedback}</p>
+        </div>
+
+        {/* Strengths & Improvements Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Strengths */}
+          {strengths.length > 0 && (
+            <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <TrendingUp size={20} className="text-green-400" />
+                <h4 className="font-bold text-white">Strengths</h4>
+              </div>
+              <ul className="space-y-2">
+                {strengths.map((strength: string, index: number) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-green-300">
+                    <CheckCircle size={16} className="text-green-400 mt-0.5 flex-shrink-0" />
+                    {strength}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Improvements */}
+          {improvements.length > 0 && (
+            <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <Sparkles size={20} className="text-blue-400" />
+                <h4 className="font-bold text-white">Growth Areas</h4>
+              </div>
+              <ul className="space-y-2">
+                {improvements.map((improvement: string, index: number) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-blue-300">
+                    <Star size={16} className="text-blue-400 mt-0.5 flex-shrink-0" />
+                    {improvement}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {/* Confidence Score */}
+        {confidence > 0 && (
+          <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-purple-300 font-medium">Analysis Confidence</span>
+              <span className="text-purple-400 font-bold">{confidence}%</span>
+            </div>
+            <div className="w-full bg-slate-700/30 rounded-full h-2">
+              <div 
+                className="bg-gradient-to-r from-purple-500 to-pink-400 h-2 rounded-full transition-all duration-1000"
+                style={{ width: `${confidence}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-4">
+          <Button
+            variant="outline"
+            onClick={() => setShowResults(false)}
+            className="border-slate-600/50 text-slate-300 w-full sm:w-auto"
+          >
+            Back to Upload
+          </Button>
+          <Button
+            onClick={handleAcceptResults}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 w-full sm:w-auto"
+          >
+            <CheckCircle size={16} className="mr-2" />
+            Accept & Save Results
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <Dialog open={isOpen} onClose={handleClose}>
       {/* Backdrop */}
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" aria-hidden="true" />
       
-      {/* Dialog Container - Full screen on mobile, centered on desktop */}
+      {/* Dialog Container */}
       <div className="fixed inset-0 z-50 overflow-y-auto">
         <div className="min-h-full flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <Dialog.Panel className="w-full max-w-lg bg-slate-800/95 backdrop-blur-sm border-0 sm:border border-slate-700/50 rounded-t-xl sm:rounded-xl shadow-2xl transform transition-all flex flex-col max-h-screen sm:max-h-[90vh]">
+          <Dialog.Panel className="w-full max-w-2xl bg-slate-800/95 backdrop-blur-sm border-0 sm:border border-slate-700/50 rounded-t-xl sm:rounded-xl shadow-2xl transform transition-all flex flex-col max-h-screen sm:max-h-[90vh]">
             {/* Fixed Header */}
             <div className="flex items-center justify-between p-4 sm:p-6 border-b border-slate-700/50 flex-shrink-0">
               <div>
                 <Dialog.Title className="text-lg sm:text-xl font-bold text-white">
-                  Upload Your ReelSkill
+                  {showResults ? 'Analysis Results' : 'Upload Your ReelSkill'}
                 </Dialog.Title>
-                <p className="text-slate-400 text-sm">Showcase your {skillName} expertise</p>
+                <p className="text-slate-400 text-sm">
+                  {showResults ? `${skillName} skill assessment` : `Showcase your ${skillName} expertise`}
+                </p>
               </div>
               <button
                 onClick={handleClose}
@@ -238,258 +376,266 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
             </div>
 
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6">
-              {/* Error Display */}
-              {error && (
-                <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 flex items-center gap-3">
-                  <AlertCircle size={20} className="text-red-400 flex-shrink-0" />
-                  <p className="text-red-300 text-sm">{error}</p>
-                </div>
-              )}
-
-              {/* Upload Method Selection */}
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-3">
-                  How would you like to share your ReelSkill?
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setUploadMethod('file')}
-                    disabled={isProcessing}
-                    className={`p-3 sm:p-4 rounded-xl border transition-all text-left disabled:opacity-50 ${
-                      uploadMethod === 'file'
-                        ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
-                        : 'border-slate-600/50 bg-slate-700/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                      <Cloud size={18} className="sm:w-5 sm:h-5" />
-                      <span className="font-medium text-sm sm:text-base">Upload ReelSkill</span>
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+              {showResults ? (
+                <ResultsDisplay />
+              ) : (
+                <div className="space-y-4 sm:space-y-6">
+                  {/* Error Display */}
+                  {error && (
+                    <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-3 flex items-center gap-3">
+                      <AlertCircle size={20} className="text-red-400 flex-shrink-0" />
+                      <p className="text-red-300 text-sm">{error}</p>
                     </div>
-                    <p className="text-xs opacity-75">Upload your video directly to secure storage</p>
-                  </button>
+                  )}
 
-                  <button
-                    type="button"
-                    onClick={() => setUploadMethod('url')}
-                    disabled={isProcessing}
-                    className={`p-3 sm:p-4 rounded-xl border transition-all text-left disabled:opacity-50 ${
-                      uploadMethod === 'url'
-                        ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
-                        : 'border-slate-600/50 bg-slate-700/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                      <Video size={18} className="sm:w-5 sm:h-5" />
-                      <span className="font-medium text-sm sm:text-base">Link ReelSkill</span>
-                    </div>
-                    <p className="text-xs opacity-75">Share from YouTube, Vimeo, or other platforms</p>
-                  </button>
-                </div>
-              </div>
-
-              {/* File Upload */}
-              {uploadMethod === 'file' && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Select Your ReelSkill Video
-                  </label>
-                  <div
-                    className={`border-2 border-dashed rounded-xl p-4 sm:p-6 text-center transition-all ${
-                      videoFile 
-                        ? 'border-green-500/50 bg-green-500/10' 
-                        : 'border-slate-600/50 bg-slate-700/20 hover:border-slate-500/50'
-                    }`}
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="video/*"
-                      onChange={handleFileSelect}
-                      disabled={isProcessing}
-                      className="hidden"
-                    />
-                    
-                    {videoFile ? (
-                      <div className="space-y-2">
-                        <CheckCircle size={24} className="sm:w-8 sm:h-8 text-green-400 mx-auto" />
-                        <p className="text-green-300 font-medium text-sm sm:text-base">{videoFile.name}</p>
-                        <p className="text-slate-400 text-xs sm:text-sm">
-                          {(videoFile.size / (1024 * 1024)).toFixed(1)} MB ReelSkill ready!
-                        </p>
-                        <Button
-                          size="small"
-                          variant="outline"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={isProcessing}
-                          className="border-slate-600/50 text-slate-300 text-xs sm:text-sm"
-                        >
-                          Change ReelSkill
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <FileVideo size={24} className="sm:w-8 sm:h-8 text-slate-400 mx-auto" />
-                        <div>
-                          <p className="text-white font-medium text-sm sm:text-base">Choose your ReelSkill video</p>
-                          <p className="text-slate-400 text-xs sm:text-sm">MP4, MOV, AVI up to 100MB</p>
+                  {/* Upload Method Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-3">
+                      How would you like to share your ReelSkill?
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setUploadMethod('file')}
+                        disabled={isProcessing}
+                        className={`p-3 sm:p-4 rounded-xl border transition-all text-left disabled:opacity-50 ${
+                          uploadMethod === 'file'
+                            ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
+                            : 'border-slate-600/50 bg-slate-700/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                          <Cloud size={18} className="sm:w-5 sm:h-5" />
+                          <span className="font-medium text-sm sm:text-base">Upload ReelSkill</span>
                         </div>
-                        <Button
-                          size="small"
-                          onClick={() => fileInputRef.current?.click()}
+                        <p className="text-xs opacity-75">Upload your video directly to secure storage</p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setUploadMethod('url')}
+                        disabled={isProcessing}
+                        className={`p-3 sm:p-4 rounded-xl border transition-all text-left disabled:opacity-50 ${
+                          uploadMethod === 'url'
+                            ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
+                            : 'border-slate-600/50 bg-slate-700/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                          <Video size={18} className="sm:w-5 sm:h-5" />
+                          <span className="font-medium text-sm sm:text-base">Link ReelSkill</span>
+                        </div>
+                        <p className="text-xs opacity-75">Share from YouTube, Vimeo, or other platforms</p>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* File Upload */}
+                  {uploadMethod === 'file' && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        Select Your ReelSkill Video
+                      </label>
+                      <div
+                        className={`border-2 border-dashed rounded-xl p-4 sm:p-6 text-center transition-all ${
+                          videoFile 
+                            ? 'border-green-500/50 bg-green-500/10' 
+                            : 'border-slate-600/50 bg-slate-700/20 hover:border-slate-500/50'
+                        }`}
+                      >
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="video/*"
+                          onChange={handleFileSelect}
                           disabled={isProcessing}
-                          className="bg-blue-600/80 hover:bg-blue-700/80 text-xs sm:text-sm"
-                        >
-                          <Upload size={12} className="sm:w-3.5 sm:h-3.5 mr-1" />
-                          Select ReelSkill
-                        </Button>
+                          className="hidden"
+                        />
+                        
+                        {videoFile ? (
+                          <div className="space-y-2">
+                            <CheckCircle size={24} className="sm:w-8 sm:h-8 text-green-400 mx-auto" />
+                            <p className="text-green-300 font-medium text-sm sm:text-base">{videoFile.name}</p>
+                            <p className="text-slate-400 text-xs sm:text-sm">
+                              {(videoFile.size / (1024 * 1024)).toFixed(1)} MB ReelSkill ready!
+                            </p>
+                            <Button
+                              size="small"
+                              variant="outline"
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={isProcessing}
+                              className="border-slate-600/50 text-slate-300 text-xs sm:text-sm"
+                            >
+                              Change ReelSkill
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <FileVideo size={24} className="sm:w-8 sm:h-8 text-slate-400 mx-auto" />
+                            <div>
+                              <p className="text-white font-medium text-sm sm:text-base">Choose your ReelSkill video</p>
+                              <p className="text-slate-400 text-xs sm:text-sm">MP4, MOV, AVI up to 100MB</p>
+                            </div>
+                            <Button
+                              size="small"
+                              onClick={() => fileInputRef.current?.click()}
+                              disabled={isProcessing}
+                              className="bg-blue-600/80 hover:bg-blue-700/80 text-xs sm:text-sm"
+                            >
+                              <Upload size={12} className="sm:w-3.5 sm:h-3.5 mr-1" />
+                              Select ReelSkill
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
+                  )}
+
+                  {/* URL Input */}
+                  {uploadMethod === 'url' && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-2">
+                        ReelSkill Video URL
+                      </label>
+                      <input
+                        type="url"
+                        value={videoUrl}
+                        onChange={(e) => setVideoUrl(e.target.value)}
+                        placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm sm:text-base"
+                        disabled={isProcessing}
+                      />
+                      <p className="text-slate-400 text-xs mt-2">
+                        Link to your ReelSkill on YouTube, Vimeo, or direct video links
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Upload Progress */}
+                  {isUploading && (
+                    <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <Cloud size={20} className="text-blue-400" />
+                        <h4 className="font-semibold text-white text-sm sm:text-base">Uploading Your ReelSkill...</h4>
+                      </div>
+                      <div className="w-full bg-slate-700/30 rounded-full h-2 sm:h-3 mb-2">
+                        <div 
+                          className="bg-gradient-to-r from-blue-500 to-cyan-400 h-2 sm:h-3 rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                      <p className="text-slate-300 text-xs sm:text-sm">{uploadProgress}% complete</p>
+                    </div>
+                  )}
+
+                  {/* Analysis Status */}
+                  {isAnalyzing && (
+                    <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <Brain size={20} className="text-purple-400" />
+                        <h4 className="font-semibold text-white text-sm sm:text-base">AI Analyzing Your ReelSkill...</h4>
+                      </div>
+                      <div className="w-full bg-slate-700/30 rounded-full h-2 sm:h-3 mb-2">
+                        <div 
+                          className="bg-gradient-to-r from-purple-500 to-pink-400 h-2 sm:h-3 rounded-full transition-all duration-500"
+                          style={{ width: `${analysisProgress}%` }}
+                        />
+                      </div>
+                      <p className="text-slate-300 text-xs sm:text-sm">
+                        {analysisProgress < 30 ? 'Processing video content...' :
+                         analysisProgress < 60 ? 'Analyzing skill demonstration...' :
+                         analysisProgress < 90 ? 'Generating feedback and rating...' :
+                         'Finalizing assessment...'}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* AI Analysis Info */}
+                  {!isProcessing && (
+                    <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl p-4">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Brain size={18} className="sm:w-5 sm:h-5 text-purple-400" />
+                        <h4 className="font-semibold text-white text-sm sm:text-base">AI-Powered Analysis</h4>
+                      </div>
+                      <p className="text-slate-300 text-xs sm:text-sm mb-3">
+                        Advanced AI will analyze your ReelSkill and provide:
+                      </p>
+                      <ul className="text-slate-300 text-xs sm:text-sm space-y-1">
+                        <li className="flex items-center gap-2">
+                          <Star size={12} className="text-yellow-400" />
+                          Skill proficiency rating (1-5 stars)
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <CheckCircle size={12} className="text-green-400" />
+                          Detailed technical feedback
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Brain size={12} className="text-purple-400" />
+                          Strengths and improvement areas
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <Video size={12} className="text-blue-400" />
+                          ReelSkill verification status
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* ReelSkill Tips */}
+                  <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
+                    <h4 className="font-semibold text-white mb-3 text-sm sm:text-base">💡 ReelSkill Tips</h4>
+                    <ul className="space-y-1 text-xs sm:text-sm text-slate-300">
+                      <li>• Keep your ReelSkill under 3 minutes for best engagement</li>
+                      <li>• Show real problem-solving, not just theory</li>
+                      <li>• Explain your thought process as you work</li>
+                      <li>• Include before/after results when possible</li>
+                      <li>• Ensure good audio and video quality</li>
+                    </ul>
                   </div>
                 </div>
               )}
+            </div>
 
-              {/* URL Input */}
-              {uploadMethod === 'url' && (
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    ReelSkill Video URL
-                  </label>
-                  <input
-                    type="url"
-                    value={videoUrl}
-                    onChange={(e) => setVideoUrl(e.target.value)}
-                    placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..."
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-slate-700/50 border border-slate-600/50 rounded-xl text-white placeholder-slate-400 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all text-sm sm:text-base"
-                    disabled={isProcessing}
-                  />
-                  <p className="text-slate-400 text-xs mt-2">
-                    Link to your ReelSkill on YouTube, Vimeo, or direct video links
-                  </p>
-                </div>
-              )}
-
-              {/* Upload Progress */}
-              {isUploading && (
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Cloud size={20} className="text-blue-400" />
-                    <h4 className="font-semibold text-white text-sm sm:text-base">Uploading Your ReelSkill...</h4>
-                  </div>
-                  <div className="w-full bg-slate-700/30 rounded-full h-2 sm:h-3 mb-2">
-                    <div 
-                      className="bg-gradient-to-r from-blue-500 to-cyan-400 h-2 sm:h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                  <p className="text-slate-300 text-xs sm:text-sm">{uploadProgress}% complete</p>
-                </div>
-              )}
-
-              {/* Analysis Status */}
-              {isAnalyzing && (
-                <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <Brain size={20} className="text-purple-400" />
-                    <h4 className="font-semibold text-white text-sm sm:text-base">Gemini AI Analyzing Your ReelSkill...</h4>
-                  </div>
-                  <div className="w-full bg-slate-700/30 rounded-full h-2 sm:h-3 mb-2">
-                    <div 
-                      className="bg-gradient-to-r from-purple-500 to-pink-400 h-2 sm:h-3 rounded-full transition-all duration-500"
-                      style={{ width: `${analysisProgress}%` }}
-                    />
-                  </div>
-                  <p className="text-slate-300 text-xs sm:text-sm">
-                    {analysisProgress < 30 ? 'Processing video content...' :
-                     analysisProgress < 60 ? 'Analyzing skill demonstration...' :
-                     analysisProgress < 90 ? 'Generating feedback and rating...' :
-                     'Finalizing assessment...'}
-                  </p>
-                </div>
-              )}
-
-              {/* Gemini AI Analysis Info */}
-              {!isProcessing && (
-                <div className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border border-purple-500/20 rounded-xl p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Brain size={18} className="sm:w-5 sm:h-5 text-purple-400" />
-                    <h4 className="font-semibold text-white text-sm sm:text-base">Powered by Google Gemini AI</h4>
-                  </div>
-                  <p className="text-slate-300 text-xs sm:text-sm mb-3">
-                    Advanced multimodal AI will analyze your ReelSkill and provide:
-                  </p>
-                  <ul className="text-slate-300 text-xs sm:text-sm space-y-1">
-                    <li className="flex items-center gap-2">
-                      <Star size={12} className="text-yellow-400" />
-                      Skill proficiency rating (1-5 stars)
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle size={12} className="text-green-400" />
-                      Detailed technical feedback
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Brain size={12} className="text-purple-400" />
-                      Strengths and improvement areas
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Video size={12} className="text-blue-400" />
-                      ReelSkill verification status
-                    </li>
-                  </ul>
-                </div>
-              )}
-
-              {/* ReelSkill Tips */}
-              <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
-                <h4 className="font-semibold text-white mb-3 text-sm sm:text-base">💡 ReelSkill Tips</h4>
-                <ul className="space-y-1 text-xs sm:text-sm text-slate-300">
-                  <li>• Keep your ReelSkill under 3 minutes for best engagement</li>
-                  <li>• Show real problem-solving, not just theory</li>
-                  <li>• Explain your thought process as you work</li>
-                  <li>• Include before/after results when possible</li>
-                  <li>• Ensure good audio and video quality</li>
-                </ul>
+            {/* Fixed Footer - Only show if not showing results */}
+            {!showResults && (
+              <div className="flex flex-col sm:flex-row justify-end gap-3 p-4 sm:p-6 border-t border-slate-700/50 bg-slate-800/95 flex-shrink-0">
+                <Button 
+                  variant="outline" 
+                  onClick={handleClose} 
+                  disabled={isProcessing}
+                  className="border-slate-600/50 text-slate-300 w-full sm:w-auto order-2 sm:order-1"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleAnalyze} 
+                  disabled={
+                    isProcessing || 
+                    (uploadMethod === 'file' && !videoFile) || 
+                    (uploadMethod === 'url' && !videoUrl.trim())
+                  }
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-700 w-full sm:w-auto order-1 sm:order-2"
+                >
+                  {isUploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Uploading... {uploadProgress}%
+                    </>
+                  ) : isAnalyzing ? (
+                    <>
+                      <Brain size={16} className="mr-2" />
+                      AI Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      <Brain size={16} className="mr-2" />
+                      Analyze with AI
+                    </>
+                  )}
+                </Button>
               </div>
-            </div>
-
-            {/* Fixed Footer */}
-            <div className="flex flex-col sm:flex-row justify-end gap-3 p-4 sm:p-6 border-t border-slate-700/50 bg-slate-800/95 flex-shrink-0">
-              <Button 
-                variant="outline" 
-                onClick={handleClose} 
-                disabled={isProcessing}
-                className="border-slate-600/50 text-slate-300 w-full sm:w-auto order-2 sm:order-1"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleAnalyze} 
-                disabled={
-                  isProcessing || 
-                  (uploadMethod === 'file' && !videoFile) || 
-                  (uploadMethod === 'url' && !videoUrl.trim())
-                }
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-slate-600 disabled:to-slate-700 w-full sm:w-auto order-1 sm:order-2"
-              >
-                {isUploading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Uploading... {uploadProgress}%
-                  </>
-                ) : isAnalyzing ? (
-                  <>
-                    <Brain size={16} className="mr-2" />
-                    Gemini AI Analyzing...
-                  </>
-                ) : (
-                  <>
-                    <Brain size={16} className="mr-2" />
-                    Analyze with Gemini AI
-                  </>
-                )}
-              </Button>
-            </div>
+            )}
           </Dialog.Panel>
         </div>
       </div>
