@@ -388,6 +388,20 @@ const ReelSkillsDashboard: React.FC = () => {
     }
   };
 
+  const handleHeroUploadClick = () => {
+    if (skills.length === 0) {
+      // If no skills, open add skill modal first
+      setIsModalOpen(true);
+    } else if (currentSkill) {
+      // If there's a current skill, open video upload
+      setShowVideoUpload(true);
+    } else {
+      // Set first skill as current and open video upload
+      setCurrentSkill(skills[0]);
+      setShowVideoUpload(true);
+    }
+  };
+
   // Retry button component
   const RetryButton = () => (
     <Button
@@ -468,7 +482,24 @@ const ReelSkillsDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* AI Feedback & Quick Actions - NOW AT THE TOP */}
+        {/* HERO UPLOAD BUTTON - THE VERY FIRST THING USERS SEE */}
+        <div className="text-center mb-8">
+          <Button
+            onClick={handleHeroUploadClick}
+            className="w-full sm:w-auto bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-xl px-12 py-6 rounded-2xl shadow-2xl transform hover:scale-105 transition-all duration-200"
+          >
+            <Brain size={28} className="mr-4" />
+            Upload & Analyze with AI
+          </Button>
+          <p className="text-slate-400 text-sm mt-3">
+            {skills.length === 0 
+              ? 'Add your first skill and create a ReelSkill demonstration'
+              : 'Upload a video to get AI-powered skill analysis'
+            }
+          </p>
+        </div>
+
+        {/* AI Feedback & Quick Actions - Show when there's a current skill */}
         {currentSkill && (
           <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-4 sm:p-6 mb-6">
             {/* Current Skill Header */}
