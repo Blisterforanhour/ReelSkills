@@ -7,7 +7,6 @@ import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
 import { VideoUploadModal } from './VideoUploadModal';
 import { SkillDetailModal } from './SkillDetailModal';
-import { ProfileCompletion } from './ProfileCompletion';
 import { ErrorHandler, withRetry } from '../lib/errorHandling';
 import { Target, Plus, Brain, Star, Award, Video, CheckCircle, Upload, Play, Edit, AlertCircle, Sparkles, Trash2, RefreshCw } from 'lucide-react';
 
@@ -365,29 +364,6 @@ const ReelSkillsDashboard: React.FC = () => {
     }
   };
 
-  const handleProfileAction = (action: string) => {
-    switch (action) {
-      case 'add-skill':
-        setIsModalOpen(true);
-        break;
-      case 'upload-video':
-        if (currentSkill) {
-          setShowVideoUpload(true);
-        } else if (skills.length > 0) {
-          setCurrentSkill(skills[0]);
-          setShowVideoUpload(true);
-        } else {
-          setIsModalOpen(true);
-        }
-        break;
-      case 'edit-profile':
-        showInfo('Coming Soon', 'Profile editing will be available soon');
-        break;
-      default:
-        break;
-    }
-  };
-
   const handleHeroUploadClick = () => {
     if (skills.length === 0) {
       // If no skills, open add skill modal first
@@ -576,13 +552,6 @@ const ReelSkillsDashboard: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* Profile Completion Component */}
-        <ProfileCompletion 
-          profile={profile}
-          skills={skills}
-          onAction={handleProfileAction}
-        />
 
         {/* Error Display with Retry */}
         {error && (
