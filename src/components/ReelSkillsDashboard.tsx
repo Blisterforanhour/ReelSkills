@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../lib/auth';
 import { Button } from './ui/Button';
+import { LoadingSpinner, LoadingOverlay } from './ui/LoadingSpinner';
+import { useToast } from './ui/Toast';
 import { getSupabaseClient } from '../lib/auth';
 import { AddSkillModal } from './AddSkillModal';
 import { VideoUploadModal } from './VideoUploadModal';
 import { SkillDetailModal } from './SkillDetailModal';
-import { Target, Plus, Brain, Star, Award, Video, CheckCircle, Upload, Play, Edit, AlertCircle, Sparkles, Trash2, MoreVertical } from 'lucide-react';
+import { ErrorHandler, withRetry } from '../lib/errorHandling';
+import { Target, Plus, Brain, Star, Award, Video, CheckCircle, Upload, Play, Edit, AlertCircle, Sparkles, Trash2, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 
 interface Skill {
   id: string;
@@ -28,6 +31,7 @@ interface Skill {
 
 const ReelSkillsDashboard: React.FC = () => {
   const { user, profile, createProfile } = useAuthStore();
+  const { showSuccess, showError, showWarning } = useToast();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [currentSkill, setCurrentSkill] = useState<Skill | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,29 +40,66 @@ const ReelSkillsDashboard: React.FC = () => {
   const [showSkillDetail, setShowSkillDetail] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creatingProfile, setCreatingProfile] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [retryCount, setRetryCount] = useState(0);
 
   const supabase = getSupabaseClient();
 
+  // Network status monitoring
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      showSuccess('Connection restored', 'You\'re back online!');
+      if (error) {
+        fetchSkills(); // Retry failed operations
+      }
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      showWarning('Connection lost', 'Some features may not work properly');
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [error, showSuccess, showWarning]);
+
   const handleCreateProfile = async () => {
-    if (!user?.email) return;
+    if (!user?.email) {
+      showError('Authentication Error', 'User email not found');
+      return;
+    }
     
     setCreatingProfile(true);
     setError(null);
     
     try {
-      const newProfile = await createProfile(
-        user.id,
-        user.email,
-        user.user_metadata?.first_name,
-        user.user_metadata?.last_name
+      const newProfile = await withRetry(
+        () => createProfile(
+          user.id,
+          user.email!,
+          user.user_metadata?.first_name,
+          user.user_metadata?.last_name
+        ),
+        3,
+        (attempt) => showWarning('Retrying...', `Attempt ${attempt} of 3`)
       );
       
       if (!newProfile) {
-        setError('Failed to create profile. Please try refreshing the page.');
+        throw new Error('Profile creation returned null');
       }
+
+      showSuccess('Profile Created', 'Welcome to ReelSkills!');
     } catch (error) {
       console.error('Error creating profile:', error);
-      setError('Failed to create profile. Please try refreshing the page.');
+      const appError = ErrorHandler.handleGenericError(error as Error);
+      setError(appError.userMessage);
+      showError('Profile Creation Failed', appError.userMessage);
     } finally {
       setCreatingProfile(false);
     }
@@ -74,45 +115,60 @@ const ReelSkillsDashboard: React.FC = () => {
     setError(null);
     
     try {
-      const { data, error } = await supabase
-        .from('skills')
-        .select('*')
-        .eq('profile_id', profile.id)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching skills:', error);
-        setError('Failed to load skills');
-        setSkills([]);
-      } else {
-        const formattedSkills = (data || []).map((row: any) => ({
-          id: row.id,
-          name: row.name,
-          category: row.category,
-          proficiency: row.proficiency,
-          status: row.verified ? 'verified' : 'planned',
-          years_experience: row.years_experience || 0,
-          verified: row.verified || false,
-          endorsements: row.endorsements || 0,
-          video_demo_url: row.video_demo_url,
-          description: row.description,
-          ai_rating: row.ai_rating,
-          ai_feedback: row.ai_feedback,
-          video_verified: row.video_verified || false,
-          video_uploaded_at: row.video_uploaded_at,
-          created_at: row.created_at,
-          updated_at: row.updated_at,
-        }));
-        setSkills(formattedSkills);
-        
-        // Set the first skill as current if none selected
-        if (formattedSkills.length > 0 && !currentSkill) {
-          setCurrentSkill(formattedSkills[0]);
+      const { data, error: supabaseError } = await withRetry(
+        () => supabase
+          .from('skills')
+          .select('*')
+          .eq('profile_id', profile.id)
+          .order('created_at', { ascending: false }),
+        3,
+        (attempt) => {
+          setRetryCount(attempt);
+          showWarning('Retrying...', `Loading skills (attempt ${attempt})`);
         }
+      );
+
+      if (supabaseError) {
+        const appError = ErrorHandler.handleSupabaseError(supabaseError);
+        throw new Error(appError.userMessage);
       }
+
+      const formattedSkills = (data || []).map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        category: row.category,
+        proficiency: row.proficiency,
+        status: row.verified ? 'verified' : 'planned',
+        years_experience: row.years_experience || 0,
+        verified: row.verified || false,
+        endorsements: row.endorsements || 0,
+        video_demo_url: row.video_demo_url,
+        description: row.description,
+        ai_rating: row.ai_rating,
+        ai_feedback: row.ai_feedback,
+        video_verified: row.video_verified || false,
+        video_uploaded_at: row.video_uploaded_at,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      }));
+      
+      setSkills(formattedSkills);
+      setRetryCount(0);
+      
+      // Set the first skill as current if none selected
+      if (formattedSkills.length > 0 && !currentSkill) {
+        setCurrentSkill(formattedSkills[0]);
+      }
+
+      if (formattedSkills.length === 0) {
+        showInfo('No Skills Yet', 'Add your first skill to get started!');
+      }
+
     } catch (error) {
       console.error('Error fetching skills:', error);
-      setError('Failed to load skills');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load skills';
+      setError(errorMessage);
+      showError('Loading Failed', errorMessage);
       setSkills([]);
     } finally {
       setLoading(false);
@@ -120,19 +176,30 @@ const ReelSkillsDashboard: React.FC = () => {
   };
 
   const handleUpdateSkill = async (skillId: string, updates: Partial<Skill>) => {
-    try {
-      const { data, error } = await supabase
-        .from('skills')
-        .update({
-          years_experience: updates.years_experience,
-          description: updates.description,
-          video_demo_url: updates.video_demo_url,
-        })
-        .eq('id', skillId)
-        .select()
-        .single();
+    if (!isOnline) {
+      showError('Offline', 'Cannot update skills while offline');
+      return;
+    }
 
-      if (error) throw error;
+    try {
+      const { data, error: supabaseError } = await withRetry(
+        () => supabase
+          .from('skills')
+          .update({
+            years_experience: updates.years_experience,
+            description: updates.description,
+            video_demo_url: updates.video_demo_url,
+          })
+          .eq('id', skillId)
+          .select()
+          .single(),
+        2
+      );
+
+      if (supabaseError) {
+        const appError = ErrorHandler.handleSupabaseError(supabaseError);
+        throw new Error(appError.userMessage);
+      }
 
       if (data) {
         const updatedSkill = { ...currentSkill, ...updates, updated_at: data.updated_at };
@@ -140,21 +207,38 @@ const ReelSkillsDashboard: React.FC = () => {
         setSkills(prev => prev.map(skill => 
           skill.id === skillId ? updatedSkill : skill
         ));
+        showSuccess('Skill Updated', 'Your changes have been saved');
       }
     } catch (error) {
       console.error('Error updating skill:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update skill';
+      showError('Update Failed', errorMessage);
       throw error;
     }
   };
 
   const handleDeleteSkill = async (skillId: string) => {
-    try {
-      const { error } = await supabase
-        .from('skills')
-        .delete()
-        .eq('id', skillId);
+    if (!isOnline) {
+      showError('Offline', 'Cannot delete skills while offline');
+      return;
+    }
 
-      if (error) throw error;
+    const skillToDelete = skills.find(s => s.id === skillId);
+    if (!skillToDelete) return;
+
+    try {
+      const { error: supabaseError } = await withRetry(
+        () => supabase
+          .from('skills')
+          .delete()
+          .eq('id', skillId),
+        2
+      );
+
+      if (supabaseError) {
+        const appError = ErrorHandler.handleSupabaseError(supabaseError);
+        throw new Error(appError.userMessage);
+      }
 
       // Remove from local state
       setSkills(prev => prev.filter(skill => skill.id !== skillId));
@@ -164,8 +248,12 @@ const ReelSkillsDashboard: React.FC = () => {
         const remainingSkills = skills.filter(skill => skill.id !== skillId);
         setCurrentSkill(remainingSkills.length > 0 ? remainingSkills[0] : null);
       }
+
+      showSuccess('Skill Deleted', `"${skillToDelete.name}" has been removed`);
     } catch (error) {
       console.error('Error deleting skill:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete skill';
+      showError('Delete Failed', errorMessage);
       throw error;
     }
   };
@@ -176,30 +264,56 @@ const ReelSkillsDashboard: React.FC = () => {
 
   const handleSave = async ({ name, category, proficiency }: Omit<Skill, 'id' | 'status' | 'years_experience' | 'verified' | 'endorsements' | 'video_verified'>) => {
     if (!profile?.id) {
-      setError('Profile not found. Please refresh the page.');
+      showError('Authentication Error', 'Profile not found. Please refresh the page.');
       return;
     }
 
-    try {
-      setError(null);
-      const { data, error } = await supabase
-        .from('skills')
-        .insert({
-          profile_id: profile.id,
-          name: name.trim(),
-          category,
-          proficiency,
-          years_experience: 0,
-          description: null,
-          verified: false,
-        })
-        .select()
-        .single();
+    if (!isOnline) {
+      showError('Offline', 'Cannot add skills while offline');
+      return;
+    }
 
-      if (error) {
-        console.error('Error saving skill:', error);
-        setError('Failed to save skill');
-        throw error;
+    // Validation
+    if (!name.trim()) {
+      showError('Validation Error', 'Skill name is required');
+      throw new Error('Skill name is required');
+    }
+
+    if (name.trim().length < 2) {
+      showError('Validation Error', 'Skill name must be at least 2 characters');
+      throw new Error('Skill name must be at least 2 characters');
+    }
+
+    // Check for duplicates
+    const existingSkill = skills.find(skill => 
+      skill.name.toLowerCase() === name.trim().toLowerCase()
+    );
+    if (existingSkill) {
+      showError('Duplicate Skill', 'You already have this skill in your portfolio');
+      throw new Error('Skill already exists');
+    }
+
+    try {
+      const { data, error: supabaseError } = await withRetry(
+        () => supabase
+          .from('skills')
+          .insert({
+            profile_id: profile.id,
+            name: name.trim(),
+            category,
+            proficiency,
+            years_experience: 0,
+            description: null,
+            verified: false,
+          })
+          .select()
+          .single(),
+        2
+      );
+
+      if (supabaseError) {
+        const appError = ErrorHandler.handleSupabaseError(supabaseError);
+        throw new Error(appError.userMessage);
       }
 
       if (data) {
@@ -223,10 +337,12 @@ const ReelSkillsDashboard: React.FC = () => {
         };
         setSkills(prev => [newSkill, ...prev]);
         setCurrentSkill(newSkill);
+        showSuccess('Skill Added', `"${name}" has been added to your portfolio`);
       }
     } catch (error) {
       console.error('Error saving skill:', error);
-      setError('Failed to save skill');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save skill';
+      showError('Save Failed', errorMessage);
       throw error;
     }
   };
@@ -258,14 +374,20 @@ const ReelSkillsDashboard: React.FC = () => {
         updateData.video_verified = result.verified;
       }
 
-      const { data, error } = await supabase
-        .from('skills')
-        .update(updateData)
-        .eq('id', currentSkill.id)
-        .select()
-        .single();
+      const { data, error: supabaseError } = await withRetry(
+        () => supabase
+          .from('skills')
+          .update(updateData)
+          .eq('id', currentSkill.id)
+          .select()
+          .single(),
+        2
+      );
 
-      if (error) throw error;
+      if (supabaseError) {
+        const appError = ErrorHandler.handleSupabaseError(supabaseError);
+        throw new Error(appError.userMessage);
+      }
 
       if (data) {
         const updatedSkill = { ...currentSkill, ...data };
@@ -273,11 +395,43 @@ const ReelSkillsDashboard: React.FC = () => {
         setSkills(prev => prev.map(skill => 
           skill.id === currentSkill.id ? updatedSkill : skill
         ));
+
+        if (result.verified) {
+          showSuccess('ReelSkill Verified!', `Your ${currentSkill.name} demonstration has been AI-verified`);
+        } else {
+          showInfo('Analysis Complete', 'Your ReelSkill has been analyzed');
+        }
       }
     } catch (error) {
       console.error('Error updating skill:', error);
+      showError('Update Failed', 'Failed to save analysis results');
     }
   };
+
+  // Retry button component
+  const RetryButton = () => (
+    <Button
+      onClick={fetchSkills}
+      variant="outline"
+      className="border-blue-500/30 text-blue-300 hover:bg-blue-500/10"
+      disabled={loading}
+    >
+      <RefreshCw size={16} className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
+      {loading ? 'Retrying...' : 'Retry'}
+    </Button>
+  );
+
+  // Network status indicator
+  const NetworkStatus = () => (
+    <div className={`fixed top-4 left-4 z-50 flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${
+      isOnline 
+        ? 'bg-green-500/20 border border-green-500/30 text-green-300' 
+        : 'bg-red-500/20 border border-red-500/30 text-red-300'
+    }`}>
+      {isOnline ? <Wifi size={16} /> : <WifiOff size={16} />}
+      {isOnline ? 'Online' : 'Offline'}
+    </div>
+  );
 
   // If user exists but no profile, show profile creation
   if (user && !profile && !creatingProfile) {
@@ -286,6 +440,7 @@ const ReelSkillsDashboard: React.FC = () => {
         background: 'radial-gradient(ellipse at center, #1E293B 0%, #0F172A 100%)',
         backgroundAttachment: 'fixed'
       }}>
+        <NetworkStatus />
         <div className="text-center max-w-md mx-auto p-6">
           <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-8">
             <AlertCircle size={48} className="text-yellow-400 mx-auto mb-4" />
@@ -298,20 +453,27 @@ const ReelSkillsDashboard: React.FC = () => {
                 <p className="text-red-300 text-sm">{error}</p>
               </div>
             )}
-            <Button 
-              onClick={handleCreateProfile}
-              className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-              disabled={creatingProfile}
-            >
-              {creatingProfile ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Creating Profile...
-                </>
-              ) : (
-                'Create Profile'
+            <div className="flex flex-col gap-3">
+              <Button 
+                onClick={handleCreateProfile}
+                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+                disabled={creatingProfile || !isOnline}
+              >
+                {creatingProfile ? (
+                  <>
+                    <LoadingSpinner size="small" />
+                    <span className="ml-2">Creating Profile...</span>
+                  </>
+                ) : (
+                  'Create Profile'
+                )}
+              </Button>
+              {!isOnline && (
+                <p className="text-yellow-400 text-sm">
+                  Please check your internet connection
+                </p>
               )}
-            </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -325,10 +487,8 @@ const ReelSkillsDashboard: React.FC = () => {
         background: 'radial-gradient(ellipse at center, #1E293B 0%, #0F172A 100%)',
         backgroundAttachment: 'fixed'
       }}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-white text-lg">Setting up your profile...</p>
-        </div>
+        <NetworkStatus />
+        <LoadingSpinner size="large" message="Setting up your profile..." />
       </div>
     );
   }
@@ -338,6 +498,8 @@ const ReelSkillsDashboard: React.FC = () => {
       background: 'radial-gradient(ellipse at center, #1E293B 0%, #0F172A 100%)',
       backgroundAttachment: 'fixed'
     }}>
+      <NetworkStatus />
+      
       <div className="max-w-4xl mx-auto p-6">
         {/* Header */}
         <div className="text-center mb-8">
@@ -349,17 +511,30 @@ const ReelSkillsDashboard: React.FC = () => {
           </p>
         </div>
 
-        {/* Error Display */}
+        {/* Error Display with Retry */}
         {error && (
           <div className="bg-red-500/20 border border-red-500/30 rounded-lg p-4 mb-6">
-            <p className="text-red-300 text-sm">{error}</p>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle size={20} className="text-red-400" />
+                <div>
+                  <p className="text-red-300 font-medium">Something went wrong</p>
+                  <p className="text-red-300 text-sm">{error}</p>
+                </div>
+              </div>
+              <RetryButton />
+            </div>
           </div>
         )}
 
         {loading ? (
           <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-white text-lg">Loading your skills...</p>
+            <LoadingSpinner size="large" message="Loading your skills..." />
+            {retryCount > 0 && (
+              <p className="text-slate-400 text-sm mt-2">
+                Retry attempt {retryCount}
+              </p>
+            )}
           </div>
         ) : skills.length === 0 ? (
           /* No Skills State */
@@ -373,90 +548,101 @@ const ReelSkillsDashboard: React.FC = () => {
               <Button 
                 onClick={() => setIsModalOpen(true)}
                 className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-lg px-8 py-4"
+                disabled={!isOnline}
               >
                 <Plus size={20} className="mr-2" />
                 Add Your First Skill
               </Button>
+              {!isOnline && (
+                <p className="text-yellow-400 text-sm mt-4">
+                  Connect to the internet to add skills
+                </p>
+              )}
             </div>
           </div>
         ) : (
           /* Main Content */
           <div className="space-y-8">
             {/* Skill Selector */}
-            <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-white">Your Skills</h2>
-                <Button 
-                  size="small"
-                  onClick={() => setIsModalOpen(true)}
-                  className="bg-blue-600/80 hover:bg-blue-700/80"
-                >
-                  <Plus size={16} className="mr-1" />
-                  Add Skill
-                </Button>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {skills.map((skill) => (
-                  <div
-                    key={skill.id}
-                    className={`relative group p-4 rounded-xl border transition-all ${
-                      currentSkill?.id === skill.id
-                        ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
-                        : 'border-slate-600/30 bg-slate-800/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/40'
-                    }`}
+            <LoadingOverlay isLoading={loading && skills.length > 0} message="Refreshing skills...">
+              <div className="bg-slate-800/20 backdrop-blur-sm border border-slate-700/20 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-white">Your Skills</h2>
+                  <Button 
+                    size="small"
+                    onClick={() => setIsModalOpen(true)}
+                    className="bg-blue-600/80 hover:bg-blue-700/80"
+                    disabled={!isOnline}
                   >
-                    <button
-                      onClick={() => setCurrentSkill(skill)}
-                      className="w-full text-left"
+                    <Plus size={16} className="mr-1" />
+                    Add Skill
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {skills.map((skill) => (
+                    <div
+                      key={skill.id}
+                      className={`relative group p-4 rounded-xl border transition-all ${
+                        currentSkill?.id === skill.id
+                          ? 'border-blue-500/50 bg-blue-500/20 text-blue-300'
+                          : 'border-slate-600/30 bg-slate-800/30 text-slate-300 hover:border-slate-500/50 hover:bg-slate-700/40'
+                      }`}
                     >
-                      <div className="font-medium mb-1">{skill.name}</div>
-                      <div className="text-xs opacity-75 capitalize">{skill.proficiency}</div>
-                      {skill.video_verified && (
-                        <div className="flex items-center gap-1 mt-2">
-                          <CheckCircle size={12} className="text-green-400" />
-                          <span className="text-xs text-green-400">AI Verified</span>
+                      <button
+                        onClick={() => setCurrentSkill(skill)}
+                        className="w-full text-left"
+                      >
+                        <div className="font-medium mb-1">{skill.name}</div>
+                        <div className="text-xs opacity-75 capitalize">{skill.proficiency}</div>
+                        {skill.video_verified && (
+                          <div className="flex items-center gap-1 mt-2">
+                            <CheckCircle size={12} className="text-green-400" />
+                            <span className="text-xs text-green-400">AI Verified</span>
+                          </div>
+                        )}
+                        {skill.video_demo_url && !skill.video_verified && (
+                          <div className="flex items-center gap-1 mt-2">
+                            <Video size={12} className="text-blue-400" />
+                            <span className="text-xs text-blue-400">ReelSkill Uploaded</span>
+                          </div>
+                        )}
+                      </button>
+                      
+                      {/* Quick Actions Menu */}
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCurrentSkill(skill);
+                              setShowSkillDetail(true);
+                            }}
+                            className="p-1.5 bg-slate-700/80 hover:bg-blue-600/80 rounded-lg transition-colors"
+                            title="Edit skill"
+                            disabled={!isOnline}
+                          >
+                            <Edit size={12} className="text-white" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm(`Are you sure you want to delete "${skill.name}"?`)) {
+                                handleDeleteSkill(skill.id);
+                              }
+                            }}
+                            className="p-1.5 bg-slate-700/80 hover:bg-red-600/80 rounded-lg transition-colors"
+                            title="Delete skill"
+                            disabled={!isOnline}
+                          >
+                            <Trash2 size={12} className="text-white" />
+                          </button>
                         </div>
-                      )}
-                      {skill.video_demo_url && !skill.video_verified && (
-                        <div className="flex items-center gap-1 mt-2">
-                          <Video size={12} className="text-blue-400" />
-                          <span className="text-xs text-blue-400">ReelSkill Uploaded</span>
-                        </div>
-                      )}
-                    </button>
-                    
-                    {/* Quick Actions Menu */}
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="flex gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setCurrentSkill(skill);
-                            setShowSkillDetail(true);
-                          }}
-                          className="p-1.5 bg-slate-700/80 hover:bg-blue-600/80 rounded-lg transition-colors"
-                          title="Edit skill"
-                        >
-                          <Edit size={12} className="text-white" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (confirm(`Are you sure you want to delete "${skill.name}"?`)) {
-                              handleDeleteSkill(skill.id);
-                            }
-                          }}
-                          className="p-1.5 bg-slate-700/80 hover:bg-red-600/80 rounded-lg transition-colors"
-                          title="Delete skill"
-                        >
-                          <Trash2 size={12} className="text-white" />
-                        </button>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            </LoadingOverlay>
 
             {/* Current Skill Focus */}
             {currentSkill && (
@@ -496,6 +682,7 @@ const ReelSkillsDashboard: React.FC = () => {
                     <Button
                       onClick={() => setShowVideoUpload(true)}
                       className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-xl px-12 py-6 rounded-2xl"
+                      disabled={!isOnline}
                     >
                       <Brain size={24} className="mr-3" />
                       Upload & Analyze with AI
@@ -539,12 +726,19 @@ const ReelSkillsDashboard: React.FC = () => {
                         <Button
                           onClick={() => setShowVideoUpload(true)}
                           className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                          disabled={!isOnline}
                         >
                           <Brain size={16} className="mr-2" />
                           Analyze with AI
                         </Button>
                       </div>
                     </div>
+                  )}
+                  
+                  {!isOnline && (
+                    <p className="text-yellow-400 text-sm mt-4">
+                      Connect to the internet to upload and analyze ReelSkills
+                    </p>
                   )}
                 </div>
 
@@ -574,6 +768,7 @@ const ReelSkillsDashboard: React.FC = () => {
                       variant="outline"
                       onClick={() => setShowVideoUpload(true)}
                       className="border-purple-500/30 text-purple-300"
+                      disabled={!isOnline}
                     >
                       <Brain size={16} className="mr-2" />
                       Re-analyze with AI
