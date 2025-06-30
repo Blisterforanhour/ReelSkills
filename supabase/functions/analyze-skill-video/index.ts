@@ -115,6 +115,7 @@ serve(async (req) => {
       // Don't fail the request if analysis storage fails
     }
 
+    // Return clean, user-friendly response - no raw JSON exposure
     return new Response(
       JSON.stringify({
         success: true,
@@ -134,7 +135,7 @@ serve(async (req) => {
     console.error('Video analysis error:', error)
     return new Response(
       JSON.stringify({ 
-        error: error.message,
+        error: 'Analysis failed. Please try again.',
         success: false
       }),
       {
@@ -164,57 +165,58 @@ ${prompt}
 
 Video URL: ${videoUrl}
 
-Please analyze this ${skillName} skill demonstration video and provide:
+Please analyze this ${skillName} skill demonstration video and provide a comprehensive assessment.
 
-1. A rating from 1-5 stars based on the demonstrated proficiency
-2. Detailed feedback on the demonstration
-3. Whether this demonstrates genuine ${proficiencyLevel} level skills
-4. Specific strengths observed
-5. Areas for improvement
-6. Confidence level in the assessment (0-100%)
-
-Consider factors like:
-- Technical accuracy and depth
-- Problem-solving approach
-- Communication and explanation quality
-- Real-world application
-- Best practices demonstration
-- Code quality (if applicable)
-- Practical implementation skills
-
-Respond in JSON format:
+IMPORTANT: You must respond with ONLY a valid JSON object in this exact format:
 {
-  "rating": number (1-5),
-  "feedback": "detailed feedback string",
-  "verified": boolean,
-  "strengths": ["strength1", "strength2", ...],
-  "improvements": ["improvement1", "improvement2", ...],
-  "confidence": number (0-100)
+  "rating": 3,
+  "feedback": "Your detailed feedback here",
+  "verified": true,
+  "strengths": ["strength1", "strength2", "strength3"],
+  "improvements": ["improvement1", "improvement2", "improvement3"],
+  "confidence": 85
 }
+
+Do not include any text before or after the JSON. The rating must be 1-5, confidence must be 0-100.
 `
 
     const result = await model.generateContent(videoAnalysisPrompt)
     const response = await result.response
-    const text = response.text()
+    const text = response.text().trim()
+
+    // Clean the response to extract only JSON
+    let jsonText = text
+    
+    // Remove any markdown formatting
+    jsonText = jsonText.replace(/```json\s*/g, '').replace(/```\s*/g, '')
+    
+    // Find JSON object boundaries
+    const jsonStart = jsonText.indexOf('{')
+    const jsonEnd = jsonText.lastIndexOf('}') + 1
+    
+    if (jsonStart !== -1 && jsonEnd > jsonStart) {
+      jsonText = jsonText.substring(jsonStart, jsonEnd)
+    }
 
     // Parse JSON response
     try {
-      const analysis = JSON.parse(text)
+      const analysis = JSON.parse(jsonText)
       
       // Validate and sanitize the response
       return {
-        rating: Math.max(1, Math.min(5, analysis.rating || 3)),
-        feedback: analysis.feedback || `Good demonstration of ${skillName} skills. Shows understanding of core concepts.`,
-        verified: analysis.verified !== false && analysis.rating >= 3,
-        strengths: Array.isArray(analysis.strengths) ? analysis.strengths.slice(0, 5) : [`Demonstrates ${skillName} knowledge`],
-        improvements: Array.isArray(analysis.improvements) ? analysis.improvements.slice(0, 5) : ['Continue practicing to refine skills'],
-        confidence: Math.max(0, Math.min(100, analysis.confidence || 75))
+        rating: Math.max(1, Math.min(5, Math.floor(analysis.rating) || 3)),
+        feedback: sanitizeFeedback(analysis.feedback, skillName),
+        verified: analysis.verified !== false && (analysis.rating || 3) >= 3,
+        strengths: sanitizeStringArray(analysis.strengths, [`Demonstrates ${skillName} knowledge`, 'Shows practical application', 'Clear problem-solving approach']),
+        improvements: sanitizeStringArray(analysis.improvements, ['Add more detailed explanations', 'Show advanced techniques', 'Continue practicing']),
+        confidence: Math.max(0, Math.min(100, Math.floor(analysis.confidence) || 75))
       }
     } catch (parseError) {
       console.error('Failed to parse AI response:', parseError)
+      console.error('Raw response:', text)
       
-      // Fallback analysis based on text content
-      return generateTextBasedAnalysis(text, skillName, proficiencyLevel)
+      // Return fallback analysis if parsing fails
+      return generateFallbackAnalysis(skillName, proficiencyLevel)
     }
 
   } catch (error) {
@@ -223,6 +225,40 @@ Respond in JSON format:
     // Return a basic analysis if AI fails
     return generateFallbackAnalysis(skillName, proficiencyLevel)
   }
+}
+
+function sanitizeFeedback(feedback: any, skillName: string): string {
+  if (typeof feedback !== 'string' || !feedback.trim()) {
+    return `Good demonstration of ${skillName} skills. Shows understanding of core concepts and practical application.`
+  }
+  
+  // Remove any JSON-like content from feedback
+  let cleanFeedback = feedback.replace(/\{[^}]*\}/g, '').trim()
+  
+  // Ensure minimum length
+  if (cleanFeedback.length < 20) {
+    return `Good demonstration of ${skillName} skills. Shows understanding of core concepts and practical application.`
+  }
+  
+  // Limit length to prevent overly long feedback
+  if (cleanFeedback.length > 500) {
+    cleanFeedback = cleanFeedback.substring(0, 497) + '...'
+  }
+  
+  return cleanFeedback
+}
+
+function sanitizeStringArray(arr: any, fallback: string[]): string[] {
+  if (!Array.isArray(arr)) {
+    return fallback
+  }
+  
+  const sanitized = arr
+    .filter(item => typeof item === 'string' && item.trim().length > 0)
+    .map(item => item.trim())
+    .slice(0, 5) // Limit to 5 items
+  
+  return sanitized.length > 0 ? sanitized : fallback
 }
 
 function generateAnalysisPrompt(skillName: string, proficiencyLevel: string): string {
@@ -247,35 +283,6 @@ Assessment Criteria for ${skillName}:
 7. Innovation: Creative or efficient approaches
 
 Please provide a thorough, constructive assessment that helps the candidate improve their skills.`
-}
-
-function generateTextBasedAnalysis(
-  responseText: string, 
-  skillName: string, 
-  proficiencyLevel: string
-): VideoAnalysisResult {
-  // Extract insights from unstructured response
-  const text = responseText.toLowerCase()
-  
-  let rating = 3
-  if (text.includes('excellent') || text.includes('outstanding') || text.includes('exceptional')) {
-    rating = 5
-  } else if (text.includes('good') || text.includes('solid') || text.includes('strong')) {
-    rating = 4
-  } else if (text.includes('poor') || text.includes('weak') || text.includes('needs improvement')) {
-    rating = 2
-  } else if (text.includes('basic') || text.includes('beginner')) {
-    rating = 2
-  }
-
-  return {
-    rating,
-    feedback: responseText.slice(0, 500) + (responseText.length > 500 ? '...' : ''),
-    verified: rating >= 3,
-    strengths: [`Demonstrates ${skillName} knowledge`, 'Shows practical application'],
-    improvements: ['Continue practicing', 'Seek feedback from peers'],
-    confidence: 70
-  }
 }
 
 function generateFallbackAnalysis(skillName: string, proficiencyLevel: string): VideoAnalysisResult {

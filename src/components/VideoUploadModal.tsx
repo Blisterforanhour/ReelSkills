@@ -108,48 +108,79 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
     return interval;
   };
 
-  const parseAnalysisResponse = (result: any) => {
-    // Handle both direct response and nested JSON string
-    let parsedResult = result;
-    
-    // If the result contains a JSON string in feedback, try to parse it
-    if (result.feedback && typeof result.feedback === 'string') {
-      try {
-        // Check if feedback contains JSON
-        if (result.feedback.includes('{') && result.feedback.includes('}')) {
-          const jsonMatch = result.feedback.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const jsonData = JSON.parse(jsonMatch[0]);
-            parsedResult = {
-              ...result,
-              ...jsonData,
-              // Keep original feedback if JSON doesn't have it
-              feedback: jsonData.feedback || result.feedback
-            };
-          }
-        }
-      } catch (e) {
-        console.log('Could not parse JSON from feedback, using original result');
-      }
-    }
-
-    // Ensure we have default values
-    return {
-      rating: parsedResult.rating || 3,
-      feedback: parsedResult.feedback || `Good demonstration of ${skillName} skills. Shows understanding of core concepts.`,
-      verified: parsedResult.verified !== false,
-      strengths: Array.isArray(parsedResult.strengths) ? parsedResult.strengths : [
+  const sanitizeAnalysisResponse = (result: any) => {
+    // Ensure we have a clean, safe response object
+    const sanitized = {
+      rating: 3,
+      feedback: `Good demonstration of ${skillName} skills. Shows understanding of core concepts.`,
+      verified: true,
+      strengths: [
         `Demonstrates ${skillName} knowledge`,
         'Shows practical application',
         'Clear problem-solving approach'
       ],
-      improvements: Array.isArray(parsedResult.improvements) ? parsedResult.improvements : [
+      improvements: [
         'Add more detailed explanations',
         'Show advanced techniques',
         'Include error handling examples'
       ],
-      confidence: parsedResult.confidence || 75
+      confidence: 75
     };
+
+    // Safely extract and validate each field
+    if (result && typeof result === 'object') {
+      // Rating validation
+      if (typeof result.rating === 'number' && result.rating >= 1 && result.rating <= 5) {
+        sanitized.rating = Math.floor(result.rating);
+      }
+
+      // Feedback validation - ensure it's a clean string with no JSON
+      if (typeof result.feedback === 'string' && result.feedback.trim()) {
+        let cleanFeedback = result.feedback.trim();
+        
+        // Remove any JSON-like content
+        cleanFeedback = cleanFeedback.replace(/\{[^}]*\}/g, '').trim();
+        
+        // Ensure it's not just JSON remnants
+        if (cleanFeedback.length > 20 && !cleanFeedback.includes('"rating"') && !cleanFeedback.includes('"feedback"')) {
+          sanitized.feedback = cleanFeedback.length > 500 ? cleanFeedback.substring(0, 497) + '...' : cleanFeedback;
+        }
+      }
+
+      // Verified validation
+      if (typeof result.verified === 'boolean') {
+        sanitized.verified = result.verified;
+      }
+
+      // Strengths validation
+      if (Array.isArray(result.strengths)) {
+        const validStrengths = result.strengths
+          .filter(s => typeof s === 'string' && s.trim().length > 0)
+          .map(s => s.trim())
+          .slice(0, 5);
+        if (validStrengths.length > 0) {
+          sanitized.strengths = validStrengths;
+        }
+      }
+
+      // Improvements validation
+      if (Array.isArray(result.improvements)) {
+        const validImprovements = result.improvements
+          .filter(i => typeof i === 'string' && i.trim().length > 0)
+          .map(i => i.trim())
+          .slice(0, 5);
+        if (validImprovements.length > 0) {
+          sanitized.improvements = validImprovements;
+        }
+      }
+
+      // Confidence validation
+      if (typeof result.confidence === 'number' && result.confidence >= 0 && result.confidence <= 100) {
+        sanitized.confidence = Math.floor(result.confidence);
+      }
+    }
+
+    return sanitized;
   };
 
   const handleAnalyze = async () => {
@@ -201,25 +232,29 @@ export const VideoUploadModal: React.FC<VideoUploadModalProps> = ({
         })
       });
 
-      const result = await response.json();
-
       // Clear progress simulation
       clearInterval(progressInterval);
       setAnalysisProgress(100);
 
       if (!response.ok) {
-        throw new Error(result.error || 'ReelSkill analysis failed');
+        throw new Error('Analysis failed. Please try again.');
       }
 
-      // Parse and store results
-      const parsedResults = parseAnalysisResponse(result);
-      setAnalysisResults(parsedResults);
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Analysis failed. Please try again.');
+      }
+
+      // Sanitize and store results - prevent any JSON exposure
+      const sanitizedResults = sanitizeAnalysisResponse(result);
+      setAnalysisResults(sanitizedResults);
       setShowResults(true);
 
     } catch (error) {
       clearInterval(progressInterval);
       console.error('ReelSkill analysis error:', error);
-      setError(error instanceof Error ? error.message : 'ReelSkill analysis failed');
+      setError('Analysis failed. Please try again.');
     } finally {
       setTimeout(() => {
         setIsAnalyzing(false);
